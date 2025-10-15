@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minhas Tarefas - CJUD</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <aside class="sidebar">
+        <div class="profile">
+          <img
+            src="https://via.placeholder.com/50"
+            alt="Foto do Perfil"
+            class="profile-pic"
+          />
+          <div class="profile-info">
+            <span class="profile-name">Seu Nome</span
+            ><span class="profile-role">Estagiário(a)</span>
+          </div>
+        </div>
+        <nav class="main-nav">
+          <ul class="nav-list">
+            <li>
+              <a href="index.html"
+                ><i class="fas fa-tachometer-alt"></i> Dashboard</a
+              >
+            </li>
+            <li>
+              <a href="form.html" target="_blank" rel="noopener noreferrer"
+                ><i class="fas fa-calendar-plus"></i> Novo Agendamento</a
+              >
+            </li>
+            <li>
+              <a href="minhas-tarefas.html" class="active"
+                ><i class="fas fa-tasks"></i> Minhas Tarefas</a
+              >
+            </li>
+            <li>
+              <a href="equipe.html"><i class="fas fa-users"></i> Equipe</a>
+            </li>
+            <li>
+              <a href="configuracoes.html"
+                ><i class="fas fa-cog"></i> Configurações</a
+              >
+            </li>
+          </ul>
+        </nav>
+        <div class="logout-link">
+          <a href="#"><i class="fas fa-sign-out-alt"></i> Sair</a>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="main-header">
+          <div class="header-title">
+            <h1>Minhas Tarefas</h1>
+            <p id="current-date"></p>
+          </div>
+        </header>
+
+        <section class="events-container">
+          <h2 class="main-title">AGENDAMENTOS SOB SUA RESPONSABILIDADE</h2>
+        </section>
+      </main>
+
+      <aside class="right-panel">
+        <div class="reminders-section">
+          <h3>
+            <i class="fas fa-bell" style="color: #5a32b3"></i> Lembretes
+            Importantes
+          </h3>
+          <div id="reminders-container"></div>
+        </div>
+      </aside>
+    </div>
+
+    <script src="tarefas.js"></script>
+  </body>
+</html>

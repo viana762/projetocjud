@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - CJUD Agendamentos</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body class="form-page-background">
+    <div class="form-container" style="max-width: 400px">
+      <header class="form-header">
+        <h1>Login</h1>
+        <p>Sistema de Agendamento CJUD</p>
+      </header>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="email">E-mail TJRS</label
+          ><input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="seu.email@tjrs.jus.br"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label for="password">Senha</label
+          ><input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Digite sua senha"
+            required
+          />
+        </div>
+        <p
+          id="error-message"
+          style="color: red; text-align: center; display: none"
+        ></p>
+        <div class="form-actions" style="border: none; padding: 0">
+          <button type="submit" class="btn-primary">Entrar</button>
+        </div>
+      </form>
+    </div>
+    <script src="login.js"></script>
+  </body>
+</html>

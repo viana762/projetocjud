@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CJUD - Sistema de Agendamento</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <aside class="sidebar">
+        <div class="profile">
+          <img
+            src="https://via.placeholder.com/50"
+            alt="Foto do Perfil"
+            class="profile-pic"
+          />
+          <div class="profile-info">
+            <span class="profile-name">Seu Nome</span
+            ><span class="profile-role">Estagiário(a)</span>
+          </div>
+        </div>
+        <nav class="main-nav">
+          <ul class="nav-list">
+            <li>
+              <a href="index.html" class="active"
+                ><i class="fas fa-tachometer-alt"></i> Dashboard</a
+              >
+            </li>
+            <li>
+              <a href="form.html" target="_blank" rel="noopener noreferrer"
+                ><i class="fas fa-calendar-plus"></i> Novo Agendamento</a
+              >
+            </li>
+            <li>
+              <a href="minhas-tarefas.html"
+                ><i class="fas fa-tasks"></i> Minhas Tarefas</a
+              >
+            </li>
+            <li>
+              <a href="equipe.html"><i class="fas fa-users"></i> Equipe</a>
+            </li>
+            <li>
+              <a href="configuracoes.html"
+                ><i class="fas fa-cog"></i> Configurações</a
+              >
+            </li>
+          </ul>
+        </nav>
+        <div class="logout-link">
+          <a href="#"><i class="fas fa-sign-out-alt"></i> Sair</a>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="main-header">
+          <div class="header-title">
+            <h1>Dashboard</h1>
+            <p id="current-date"></p>
+          </div>
+          <div class="header-actions">
+            <div class="search-container">
+              <input
+                type="text"
+                id="search-bar"
+                class="search-bar"
+                placeholder="Buscar por título, local..."
+              />
+              <button id="search-btn" class="action-btn">
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <section class="events-container">
+          <div class="view-toggle">
+            <button id="view-upcoming-btn" class="view-btn active">
+              Próximos
+            </button>
+            <button id="view-past-btn" class="view-btn">Histórico</button>
+          </div>
+          <h2 class="main-title">AGENDAMENTOS</h2>
+        </section>
+      </main>
+
+      <aside class="right-panel">
+        <a
+          href="form.html"
+          class="btn-primary"
+          target="_blank"
+          rel="noopener noreferrer"
+          >+ Novo Agendamento</a
+        >
+        <div class="mini-calendar">
+          <div class="calendar-header">
+            <button id="prev-month-btn" class="nav-btn">
+              <i class="fas fa-chevron-left"></i></button
+            ><span id="calendar-month-year"></span
+            ><button id="next-month-btn" class="nav-btn">
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+          <ul class="calendar-weekdays">
+            <li>D</li>
+            <li>S</li>
+            <li>T</li>
+            <li>Q</li>
+            <li>Q</li>
+            <li>S</li>
+            <li>S</li>
+          </ul>
+          <ul id="calendar-days-grid" class="calendar-days"></ul>
+        </div>
+        <div class="upcoming-events">
+          <h3>
+            <i class="fas fa-star" style="color: #f39c12"></i> EVENTOS
+            PRIORIZADOS
+          </h3>
+          <div id="prioritized-events-list"></div>
+        </div>
+      </aside>
+    </div>
+
+    <div id="assign-modal" class="modal-overlay">
+      <div class="modal-content">
+        <button class="modal-close-btn">&times;</button>
+        <h3>Designar Estagiário</h3>
+        <p>Selecione um estagiário para adicionar ou remover desta tarefa:</p>
+        <ul id="modal-intern-list" class="intern-list"></ul>
+      </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+  </body>
+</html>

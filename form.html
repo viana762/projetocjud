@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Novo Agendamento - CJUD</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+  </head>
+  <body class="form-page-background">
+    <div class="form-container">
+      <header class="form-header">
+        <h1>Solicitar Novo Agendamento</h1>
+        <p>
+          Preencha os detalhes abaixo para reservar um laboratório ou auditório.
+        </p>
+      </header>
+
+      <form id="agendamento-form">
+        <div class="form-group">
+          <label for="event-title">Título do Evento/Curso</label
+          ><input type="text" id="event-title" name="event-title" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="start-date">Data de Início</label
+            ><input type="date" id="start-date" name="start-date" required />
+          </div>
+          <div class="form-group">
+            <label for="end-date">Data de Fim</label
+            ><input type="date" id="end-date" name="end-date" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="start-time">Horário de Início</label
+            ><input type="time" id="start-time" name="start-time" required />
+          </div>
+          <div class="form-group">
+            <label for="end-time">Horário de Fim</label
+            ><input type="time" id="end-time" name="end-time" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="event-location"
+            ><span>Local</span
+            ><button
+              type="button"
+              id="add-location-btn"
+              class="btn-add-small"
+              title="Adicionar novo local"
+            >
+              <i class="fas fa-plus"></i></button
+          ></label>
+          <select id="event-location" name="event-location" required>
+            <option value="" disabled selected>Selecione um local...</option>
+            <option value="Auditório">Auditório</option>
+            <option value="Laboratório 403">Laboratório 403</option>
+            <option value="Laboratório 404">Laboratório 404</option>
+            <option value="Sala de Reuniões">Sala de Reuniões</option>
+            <option value="Laboratório 406">Laboratório 406</option>
+            <option value="Laboratório 408">Laboratório 408</option>
+            <option value="Laboratório 506">Laboratório 506</option>
+            <option value="Laboratório 508">Laboratório 508</option>
+          </select>
+          <div id="new-location-container" class="hidden-input">
+            <input
+              type="text"
+              id="new-location-input"
+              name="new-location-input"
+              placeholder="Digite o novo local"
+            /><button
+              type="button"
+              id="save-new-location-btn"
+              class="btn-save-small"
+            >
+              Salvar
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Equipamentos Necessários</label>
+          <div class="checkbox-group">
+            <label
+              ><input type="checkbox" name="equip" value="Sistema de Som" />
+              <span>Sistema de Som</span></label
+            >
+            <label
+              ><input type="checkbox" name="equip" value="Microfone sem Fio" />
+              <span>Microfone sem Fio</span></label
+            >
+            <label
+              ><input type="checkbox" name="equip" value="Passador de Slides" />
+              <span>Passador de Slides</span></label
+            >
+            <label
+              ><input
+                type="checkbox"
+                name="equip"
+                value="Webcam para Transmissão"
+              />
+              <span>Webcam para Transmissão</span></label
+            >
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Presença do Estagiário</label>
+          <div class="radio-group">
+            <label
+              ><input
+                type="radio"
+                name="presenca"
+                value="inicio"
+                checked
+              /><span>Apenas no início</span></label
+            ><label
+              ><input type="radio" name="presenca" value="integral" /><span
+                >Tempo integral</span
+              ></label
+            ><label
+              ><input
+                type="radio"
+                name="presenca"
+                value="nao-necessario"
+              /><span>Não necessário</span></label
+            >
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="event-notes">Observações</label
+          ><textarea id="event-notes" name="event-notes" rows="4"></textarea>
+        </div>
+        <div class="form-actions">
+          <a href="index.html" class="btn-secondary">Cancelar</a
+          ><button type="submit" class="btn-primary">Enviar Solicitação</button>
+        </div>
+      </form>
+    </div>
+    <script src="form.js"></script>
+  </body>
+</html>

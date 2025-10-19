@@ -1,11 +1,7 @@
-// backend/seed.js
-
 const { openDb } = require('./database.js');
 const bcrypt = require('bcrypt');
 
-// Lista de usuários reais para serem criados no sistema.
 const usersToCreate = [
-  // Supervisores
   {
     name: 'Maikon Pagani',
     email: 'mmpagani@tjrs.jus.br',
@@ -18,8 +14,6 @@ const usersToCreate = [
     password: 'cjud@321',
     role: 'SUPERVISOR',
   },
-
-  // Estagiários
   {
     name: 'Quetlin Pavinatto',
     email: 'qpavinatto@tjrs.jus.br',
@@ -46,20 +40,15 @@ const usersToCreate = [
   },
 ];
 
-// Esta função vai ler a lista acima e criar cada usuário no banco de dados.
 async function seed() {
   console.log('Iniciando a criação de usuários...');
   const db = await openDb();
 
-  // Limpa a tabela de usuários para garantir que não haja duplicatas
   await db.run('DELETE FROM users');
 
-  // Percorre a lista e cria cada usuário
   for (const user of usersToCreate) {
-    // Embaralha a senha para segurança
     const hashedPassword = await bcrypt.hash(user.password, 10);
 
-    // Insere o usuário no banco de dados
     await db.run(
       `INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`,
       [user.name, user.email, hashedPassword, user.role]
@@ -73,5 +62,4 @@ async function seed() {
   );
 }
 
-// Executa a função
 seed();

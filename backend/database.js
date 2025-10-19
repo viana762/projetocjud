@@ -1,5 +1,3 @@
-// backend/database.js
-
 const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 
@@ -13,7 +11,6 @@ async function openDb() {
 async function setup() {
   const db = await openDb();
 
-  // MUDANÇA AQUI: Tabela de agendamentos agora tem data de início e fim
   await db.exec(`
         CREATE TABLE IF NOT EXISTS agendamentos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,11 +24,11 @@ async function setup() {
             presence TEXT,
             notes TEXT,
             is_prioritized INTEGER DEFAULT 0,
-            responsible_interns TEXT DEFAULT '[]'
+            responsible_interns TEXT DEFAULT '[]',
+            equipments_checked TEXT DEFAULT '[]'
         )
     `);
 
-  // Tabela de usuários (sem mudanças)
   await db.exec(`
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,7 +39,6 @@ async function setup() {
         )
     `);
 
-  // Tabela de notificações (sem mudanças)
   await db.exec(`
         CREATE TABLE IF NOT EXISTS notifications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +50,7 @@ async function setup() {
     `);
 
   console.log(
-    'Tabelas de agendamentos (com data de início/fim), usuários e notificações configuradas com sucesso.'
+    'Tabelas de agendamentos, usuários e notificações configuradas com sucesso.'
   );
 }
 

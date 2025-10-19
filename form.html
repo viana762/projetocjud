@@ -21,40 +21,41 @@
 
       <form id="agendamento-form">
         <div class="form-group">
-          <label for="event-title">Título do Evento/Curso</label
-          ><input type="text" id="event-title" name="event-title" required />
+          <label for="event-title">Título do Evento/Curso</label>
+          <input type="text" id="event-title" name="event-title" required />
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="start-date">Data de Início</label
-            ><input type="date" id="start-date" name="start-date" required />
+            <label for="start-date">Data de Início</label>
+            <input type="date" id="start-date" name="start-date" required />
           </div>
           <div class="form-group">
-            <label for="end-date">Data de Fim</label
-            ><input type="date" id="end-date" name="end-date" required />
+            <label for="end-date">Data de Fim</label>
+            <input type="date" id="end-date" name="end-date" required />
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="start-time">Horário de Início</label
-            ><input type="time" id="start-time" name="start-time" required />
+            <label for="start-time">Horário de Início</label>
+            <input type="time" id="start-time" name="start-time" required />
           </div>
           <div class="form-group">
-            <label for="end-time">Horário de Fim</label
-            ><input type="time" id="end-time" name="end-time" required />
+            <label for="end-time">Horário de Fim</label>
+            <input type="time" id="end-time" name="end-time" required />
           </div>
         </div>
         <div class="form-group">
-          <label for="event-location"
-            ><span>Local</span
-            ><button
+          <label for="event-location">
+            <span>Local</span>
+            <button
               type="button"
               id="add-location-btn"
               class="btn-add-small"
               title="Adicionar novo local"
             >
-              <i class="fas fa-plus"></i></button
-          ></label>
+              <i class="fas fa-plus"></i>
+            </button>
+          </label>
           <select id="event-location" name="event-location" required>
             <option value="" disabled selected>Selecione um local...</option>
             <option value="Auditório">Auditório</option>
@@ -72,7 +73,8 @@
               id="new-location-input"
               name="new-location-input"
               placeholder="Digite o novo local"
-            /><button
+            />
+            <button
               type="button"
               id="save-new-location-btn"
               class="btn-save-small"
@@ -84,6 +86,10 @@
         <div class="form-group">
           <label>Equipamentos Necessários</label>
           <div class="checkbox-group">
+            <label
+              ><input type="checkbox" name="equip" value="Projetor" />
+              <span>Projetor</span></label
+            >
             <label
               ><input type="checkbox" name="equip" value="Sistema de Som" />
               <span>Sistema de Som</span></label
@@ -116,11 +122,13 @@
                 value="inicio"
                 checked
               /><span>Apenas no início</span></label
-            ><label
+            >
+            <label
               ><input type="radio" name="presenca" value="integral" /><span
                 >Tempo integral</span
               ></label
-            ><label
+            >
+            <label
               ><input
                 type="radio"
                 name="presenca"
@@ -130,12 +138,12 @@
           </div>
         </div>
         <div class="form-group">
-          <label for="event-notes">Observações</label
-          ><textarea id="event-notes" name="event-notes" rows="4"></textarea>
+          <label for="event-notes">Observações</label>
+          <textarea id="event-notes" name="event-notes" rows="4"></textarea>
         </div>
         <div class="form-actions">
-          <a href="index.html" class="btn-secondary">Cancelar</a
-          ><button type="submit" class="btn-primary">Enviar Solicitação</button>
+          <a href="index.html" class="btn-secondary">Cancelar</a>
+          <button type="submit" class="btn-primary">Enviar Solicitação</button>
         </div>
       </form>
     </div>

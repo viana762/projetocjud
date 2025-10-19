@@ -1,6 +1,7 @@
 // configuracoes.js
 
 document.addEventListener('DOMContentLoaded', function () {
+  const RENDER_URL = 'https://projeto-cjud-backend.onrender.com';
   // Autenticação e preenchimento da sidebar
   const currentUserJSON = localStorage.getItem('currentUser');
   if (!currentUserJSON) {
@@ -49,25 +50,21 @@ document.addEventListener('DOMContentLoaded', function () {
       nameSuccessMessage.style.display = 'none';
       const newName = userNameInput.value.trim();
 
-      if (newName === currentUserName) return; // Não faz nada se o nome não mudou
+      if (newName === currentUserName) return;
 
       try {
-        const response = await fetch(
-          'https://projeto-cjud-backend.onrender.com/users/change-name',
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: currentUser.email,
-              newName: newName,
-            }),
-          }
-        );
+        const response = await fetch(`${RENDER_URL}/users/change-name`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: currentUser.email,
+            newName: newName,
+          }),
+        });
 
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
 
-        // Atualiza o nome no localStorage e na tela
         currentUser.name = data.newName;
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
         document.querySelector('.profile-name').textContent = data.newName;
@@ -103,18 +100,15 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       try {
-        const response = await fetch(
-          'https://projeto-cjud-backend.onrender.com/users/change-password',
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: currentUser.email,
-              currentPassword,
-              newPassword,
-            }),
-          }
-        );
+        const response = await fetch(`${RENDER_URL}/users/change-password`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: currentUser.email,
+            currentPassword,
+            newPassword,
+          }),
+        });
 
         const data = await response.json();
 

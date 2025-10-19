@@ -1,6 +1,11 @@
 document.addEventListener('DOMContentLoaded', function () {
+  const RENDER_URL = 'https://projeto-cjud-backend.onrender.com';
   const form = document.getElementById('agendamento-form');
   if (!form) return;
+
+  const currentUserJSON = localStorage.getItem('currentUser');
+  const currentUser = JSON.parse(currentUserJSON);
+  const schedulerEmail = currentUser ? currentUser.email : null;
 
   const urlParams = new URLSearchParams(window.location.search);
   const agendamentoId = urlParams.get('id');
@@ -56,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function () {
     async function preencherFormulario() {
       try {
         const response = await fetch(
-          `https://projeto-cjud-backend.onrender.com/agendamentos/${agendamentoId}`
+          `${RENDER_URL}/agendamentos/${agendamentoId}`
         );
         if (!response.ok) throw new Error('Agendamento não encontrado.');
         const ag = await response.json();
@@ -88,6 +93,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
   form.addEventListener('submit', async function (event) {
     event.preventDefault();
+
+    if (!isEditMode && !schedulerEmail) {
+      alert('Erro de autenticação: E-mail do agendador não encontrado.');
+      return;
+    }
+
     const formData = {
       title: document.getElementById('event-title').value,
       startDate: document.getElementById('start-date').value,
@@ -100,12 +111,13 @@ document.addEventListener('DOMContentLoaded', function () {
       ).map((cb) => cb.value),
       presence: document.querySelector('input[name="presenca"]:checked').value,
       notes: document.getElementById('event-notes').value,
+      ...(isEditMode ? {} : { schedulerEmail: schedulerEmail }),
     };
 
     const method = isEditMode ? 'PUT' : 'POST';
     const url = isEditMode
-      ? `https://projeto-cjud-backend.onrender.com/agendamentos/${agendamentoId}`
-      : 'https://projeto-cjud-backend.onrender.com/agendamentos';
+      ? `${RENDER_URL}/agendamentos/${agendamentoId}`
+      : `${RENDER_URL}/agendamentos`;
 
     try {
       const response = await fetch(url, {

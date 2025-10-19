@@ -1,9 +1,20 @@
-// backend/server.js
-
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
 const { openDb, setup } = require('./database.js');
+
+const transporter = nodemailer.createTransport({
+  host: 'smtp.office365.com',
+  port: 587,
+  secure: false,
+  auth: {
+    user: 'sistema.cjud.agendamentos@outlook.com', // e-mail Outlook
+    pass: 'bwoovrwgiuglpnmm', // senha de aplicativo
+  },
+});
+
+const EMAIL_FIXO_DESTINO = 'vianagemini99@gmail.com';
 
 async function startServer() {
   try {
@@ -13,7 +24,6 @@ async function startServer() {
     app.use(cors());
     app.use(express.json());
 
-    // ROTA DE LOGIN
     app.post('/login', async (req, res) => {
       try {
         const { email, password } = req.body;
@@ -21,11 +31,13 @@ async function startServer() {
         const user = await db.get('SELECT * FROM users WHERE email = ?', [
           email,
         ]);
-        if (!user)
+        if (!user) {
           return res.status(404).json({ message: 'E-mail não encontrado.' });
+        }
         const isPasswordCorrect = await bcrypt.compare(password, user.password);
-        if (!isPasswordCorrect)
+        if (!isPasswordCorrect) {
           return res.status(401).json({ message: 'Senha incorreta.' });
+        }
         res.json({
           message: 'Login bem-sucedido!',
           user: { name: user.name, role: user.role, email: user.email },
@@ -35,7 +47,6 @@ async function startServer() {
       }
     });
 
-    // ROTAS DE USUÁRIOS E EQUIPE
     app.get('/equipe', async (req, res) => {
       try {
         const db = await openDb();
@@ -47,6 +58,7 @@ async function startServer() {
         res.status(500).json({ message: 'Erro ao buscar a equipe.' });
       }
     });
+
     app.get('/estagiarios', async (req, res) => {
       try {
         const db = await openDb();
@@ -60,6 +72,7 @@ async function startServer() {
           .json({ message: 'Erro ao buscar a lista de estagiários.' });
       }
     });
+
     app.post('/users', async (req, res) => {
       try {
         const { name, email, role } = req.body;
@@ -82,6 +95,7 @@ async function startServer() {
         res.status(500).json({ message: 'Erro ao criar o usuário.' });
       }
     });
+
     app.put('/users/change-name', async (req, res) => {
       try {
         const { email, newName } = req.body;
@@ -95,6 +109,7 @@ async function startServer() {
         res.status(500).json({ message: 'Erro ao alterar o nome.' });
       }
     });
+
     app.put('/users/change-password', async (req, res) => {
       try {
         const { email, currentPassword, newPassword } = req.body;
@@ -126,7 +141,6 @@ async function startServer() {
       }
     });
 
-    // ROTAS DE AGENDAMENTO
     app.post('/agendamentos', async (req, res) => {
       try {
         const {
@@ -139,10 +153,11 @@ async function startServer() {
           equipments,
           presence,
           notes,
+          schedulerEmail,
         } = req.body;
         const db = await openDb();
-        await db.run(
-          'INSERT INTO agendamentos (title, startDate, endDate, startTime, endTime, location, equipments, presence, notes, is_prioritized, responsible_interns) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        const result = await db.run(
+          'INSERT INTO agendamentos (title, startDate, endDate, startTime, endTime, location, equipments, presence, notes, is_prioritized, responsible_interns, equipments_checked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             title,
             startDate,
@@ -155,14 +170,55 @@ async function startServer() {
             notes,
             0,
             '[]',
+            '[]',
           ]
         );
+        const novoId = result.lastID;
+
+        const mailOptions = {
+          from: `"Sistema CJUD" <${transporter.options.auth.user}>`,
+          to: EMAIL_FIXO_DESTINO,
+          cc: schedulerEmail,
+          subject: `Confirmação de Agendamento: ${title}`,
+          html: `<h3>Agendamento Criado com Sucesso! (ID: ${novoId})</h3><p>O agendamento a seguir foi criado por ${schedulerEmail}:</p><ul><li><strong>Título:</strong> ${title}</li><li><strong>Período:</strong> ${startDate} ${startTime} a ${endDate} ${endTime}</li><li><strong>Local:</strong> ${location}</li><li><strong>Equipamentos Solicitados:</strong> ${
+            equipments.join(', ') || 'Nenhum'
+          }</li><li><strong>Observações:</strong> ${
+            notes || 'Nenhuma'
+          }</li></ul><p>Acesse o painel para mais detalhes.</p>`,
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            console.error('ERRO AO ENVIAR E-MAIL:', error);
+          } else {
+            console.log('E-mail enviado:', info.response);
+          }
+        });
+
         res.status(201).json({ message: 'Agendamento criado com sucesso!' });
       } catch (error) {
         console.error('ERRO AO CRIAR AGENDAMENTO:', error);
         res
           .status(500)
           .json({ message: 'Erro interno ao salvar o agendamento.' });
+      }
+    });
+
+    app.put('/agendamentos/:id/check-equipamentos', async (req, res) => {
+      try {
+        const db = await openDb();
+        const { id } = req.params;
+        const { equipmentsChecked } = req.body;
+        await db.run(
+          'UPDATE agendamentos SET equipments_checked = ? WHERE id = ?',
+          [JSON.stringify(equipmentsChecked), id]
+        );
+        res.json({
+          message: 'Checklist de equipamentos atualizado com sucesso!',
+        });
+      } catch (error) {
+        console.error('ERRO AO ATUALIZAR CHECKLIST:', error);
+        res.status(500).json({ message: 'Erro ao atualizar checklist.' });
       }
     });
 
@@ -198,10 +254,11 @@ async function startServer() {
       try {
         const db = await openDb();
         const { internName } = req.query;
-        if (!internName)
+        if (!internName) {
           return res
             .status(400)
             .json({ message: 'Nome do estagiário é obrigatório.' });
+        }
         const hoje = new Date().toISOString().split('T')[0];
         const searchTerm = `%"${internName}"%`;
         const agendamentos = await db.all(
@@ -305,18 +362,21 @@ async function startServer() {
           let message = '';
           if (interns.includes(internName)) {
             interns = interns.filter((name) => name !== internName);
-            if (supervisorName)
+            if (supervisorName) {
               message = `O supervisor ${supervisorName} removeu você da tarefa "${agendamento.title}".`;
+            }
           } else {
             interns.push(internName);
-            if (supervisorName)
+            if (supervisorName) {
               message = `O supervisor ${supervisorName} designou você para a tarefa "${agendamento.title}".`;
+            }
           }
-          if (message)
+          if (message) {
             await db.run(
               'INSERT INTO notifications (intern_name, message) VALUES (?, ?)',
               [internName, message]
             );
+          }
           await db.run(
             'UPDATE agendamentos SET responsible_interns = ? WHERE id = ?',
             [JSON.stringify(interns), id]
@@ -346,24 +406,35 @@ async function startServer() {
     });
 
     app.get('/notifications', async (req, res) => {
-      const db = await openDb();
-      const { internName } = req.query;
-      if (!internName) {
-        return res
-          .status(400)
-          .json({ message: 'Nome do estagiário é obrigatório.' });
+      try {
+        const db = await openDb();
+        const { internName } = req.query;
+        if (!internName) {
+          return res
+            .status(400)
+            .json({ message: 'Nome do estagiário é obrigatório.' });
+        }
+        const notifications = await db.all(
+          'SELECT * FROM notifications WHERE intern_name = ? AND is_read = 0 ORDER BY timestamp DESC',
+          [internName]
+        );
+        res.json(notifications);
+      } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar notificações.' });
       }
-      const notifications = await db.all(
-        'SELECT * FROM notifications WHERE intern_name = ? AND is_read = 0 ORDER BY timestamp DESC',
-        [internName]
-      );
-      res.json(notifications);
     });
+
     app.put('/notifications/:id/read', async (req, res) => {
-      const db = await openDb();
-      const { id } = req.params;
-      await db.run('UPDATE notifications SET is_read = 1 WHERE id = ?', [id]);
-      res.json({ message: 'Notificação marcada como lida.' });
+      try {
+        const db = await openDb();
+        const { id } = req.params;
+        await db.run('UPDATE notifications SET is_read = 1 WHERE id = ?', [id]);
+        res.json({ message: 'Notificação marcada como lida.' });
+      } catch (error) {
+        res
+          .status(500)
+          .json({ message: 'Erro ao marcar notificação como lida.' });
+      }
     });
 
     app.listen(port, () => {

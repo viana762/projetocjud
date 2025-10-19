@@ -1,6 +1,7 @@
 // equipe.js
 
 document.addEventListener('DOMContentLoaded', function () {
+  const RENDER_URL = 'https://projeto-cjud-backend.onrender.com';
   const currentUserJSON = localStorage.getItem('currentUser');
   const currentUser = JSON.parse(currentUserJSON);
   if (!currentUser) {
@@ -58,9 +59,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   async function carregarEquipe() {
     try {
-      const response = await fetch(
-        'https://projeto-cjud-backend.onrender.com/equipe'
-      );
+      const response = await fetch(`${RENDER_URL}/equipe`);
       const equipe = await response.json();
 
       supervisorsList.innerHTML = '';
@@ -68,18 +67,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
       equipe.forEach((user) => {
         const userCardHTML = `
-                    <div class="user-card">
-                        <i class="fas ${
-                          user.role === 'SUPERVISOR'
-                            ? 'fa-user-tie'
-                            : 'fa-user-graduate'
-                        }"></i>
-                        <div class="user-info">
-                            <span class="user-name">${user.name}</span>
-                            <span class="user-email">${user.email}</span>
-                        </div>
-                    </div>
-                `;
+                      <div class="user-card">
+                          <i class="fas ${
+                            user.role === 'SUPERVISOR'
+                              ? 'fa-user-tie'
+                              : 'fa-user-graduate'
+                          }"></i>
+                          <div class="user-info">
+                              <span class="user-name">${user.name}</span>
+                              <span class="user-email">${user.email}</span>
+                          </div>
+                      </div>
+                  `;
         if (user.role === 'SUPERVISOR') {
           supervisorsList.innerHTML += userCardHTML;
         } else {
@@ -116,14 +115,11 @@ document.addEventListener('DOMContentLoaded', function () {
       };
 
       try {
-        const response = await fetch(
-          'https://projeto-cjud-backend.onrender.com/users',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newUser),
-          }
-        );
+        const response = await fetch(`${RENDER_URL}/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newUser),
+        });
         const data = await response.json();
         alert(data.message);
         if (response.ok) {

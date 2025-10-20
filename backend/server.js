@@ -22,14 +22,11 @@ async function startServer() {
     const app = express();
     const port = process.env.PORT || 3000;
 
-    // --- CORREÇÃO DE CORS ---
-    // Permite requisições APENAS do seu site no GitHub Pages.
     app.use(
       cors({
         origin: 'https://vianna762.github.io',
       })
     );
-    // --- FIM DA CORREÇÃO ---
 
     app.use(express.json());
 
@@ -55,8 +52,6 @@ async function startServer() {
         res.status(500).json({ message: 'Erro interno do servidor.' });
       }
     });
-
-    // ... (o resto do seu código continua exatamente igual) ...
 
     app.get('/equipe', async (req, res) => {
       try {

@@ -22,9 +22,7 @@ async function startServer() {
     const app = express();
     const port = process.env.PORT || 3000;
 
-    // --- CONFIGURAÇÃO DE CORS SIMPLIFICADA E UNIVERSAL ---
     app.use(cors());
-    // --- FIM DA CONFIGURAÇÃO ---
 
     app.use(express.json());
 
@@ -163,7 +161,7 @@ async function startServer() {
         } = req.body;
         const db = await openDb();
         const result = await db.run(
-          'INSERT INTO agendamentos (title, startDate, endDate, startTime, endTime, location, equipments, presence, notes, is_prioritized, responsible_interns, equipments_checked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO agendamentos (title, startDate, endDate, startTime, endTime, location, equipments, presence, notes, is_prioritized, responsible_interns) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             title,
             startDate,
@@ -175,7 +173,6 @@ async function startServer() {
             presence,
             notes,
             0,
-            '[]',
             '[]',
           ]
         );

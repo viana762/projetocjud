@@ -2,12 +2,23 @@ document.addEventListener('DOMContentLoaded', function () {
   const form = document.getElementById('agendamento-form');
   if (!form) return;
 
+  function customAlert(message, isSuccess = true) {
+    const alertBox = document.createElement('div');
+    alertBox.className = `custom-alert ${isSuccess ? 'success' : 'error'}`;
+    alertBox.textContent = message;
+    document.body.appendChild(alertBox);
+    setTimeout(() => {
+      alertBox.remove();
+    }, 3000);
+  }
+
   const currentUserJSON = localStorage.getItem('currentUser');
   const currentUser = currentUserJSON ? JSON.parse(currentUserJSON) : null;
 
   if (!currentUser) {
-    alert(
-      'Erro: Utilizador não autenticado. Por favor, faça o login novamente.'
+    customAlert(
+      'Erro: Utilizador não autenticado. Por favor, faça o login novamente.',
+      false
     );
     window.location.href = 'login.html';
     return;
@@ -96,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (radio) radio.checked = true;
       } catch (error) {
         console.error('Erro ao buscar dados para edição:', error);
-        alert('Não foi possível carregar os dados para edição.');
+        customAlert('Não foi possível carregar os dados para edição.', false);
       }
     }
     preencherFormulario();
@@ -138,15 +149,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
       if (!response.ok) throw new Error(data.message);
 
-      alert(data.message);
+      customAlert(data.message);
 
       if (window.opener) {
         window.opener.localStorage.setItem('agendamentoAtualizado', Date.now());
       }
-      window.close();
+      setTimeout(() => window.close(), 1000);
     } catch (error) {
       console.error('Erro ao salvar agendamento:', error);
-      alert('Ocorreu um erro ao salvar o agendamento.');
+      customAlert('Ocorreu um erro ao salvar o agendamento.', false);
     }
   });
 });

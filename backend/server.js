@@ -22,12 +22,9 @@ async function startServer() {
     const app = express();
     const port = process.env.PORT || 3000;
 
-    const corsOptions = {
-      origin: 'https://vianna762.github.io',
-      methods: ['GET', 'POST', 'PUT', 'DELETE'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-    };
-    app.use(cors(corsOptions));
+    // --- CONFIGURAÇÃO DE CORS SIMPLIFICADA E UNIVERSAL ---
+    app.use(cors());
+    // --- FIM DA CONFIGURAÇÃO ---
 
     app.use(express.json());
 
@@ -184,10 +181,8 @@ async function startServer() {
         );
         const novoId = result.lastID;
 
-        // Responde ao utilizador imediatamente
         res.status(201).json({ message: 'Agendamento criado com sucesso!' });
 
-        // Tenta enviar o e-mail em segundo plano
         try {
           const mailOptions = {
             from: `"Sistema CJUD" <${process.env.EMAIL_USER}>`,

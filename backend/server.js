@@ -22,9 +22,12 @@ async function startServer() {
     const app = express();
     const port = process.env.PORT || 3000;
 
-    // --- CONFIGURAÇÃO DE CORS SIMPLIFICADA PARA DEBUG ---
-    app.use(cors());
-    // --- FIM DA CONFIGURAÇÃO ---
+    const corsOptions = {
+      origin: 'https://vianna762.github.io',
+      methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    };
+    app.use(cors(corsOptions));
 
     app.use(express.json());
 
@@ -181,38 +184,46 @@ async function startServer() {
         );
         const novoId = result.lastID;
 
-        const mailOptions = {
-          from: `"Sistema CJUD" <${process.env.EMAIL_USER}>`,
-          to: EMAIL_FIXO_DESTINO,
-          cc: schedulerEmail,
-          subject: `Confirmação de Agendamento: ${title}`,
-          html: `
-            <h3>Agendamento Criado com Sucesso! (ID: ${novoId})</h3>
-            <p>O agendamento a seguir foi criado por ${schedulerEmail}:</p>
-            <ul>
-                <li><strong>Título:</strong> ${title}</li>
-                <li><strong>Período:</strong> ${startDate} ${startTime} a ${endDate} ${endTime}</li>
-                <li><strong>Local:</strong> ${location}</li>
-                <li><strong>Equipamentos Solicitados:</strong> ${
-                  equipments.join(', ') || 'Nenhum'
-                }</li>
-                <li><strong>Observações:</strong> ${notes || 'Nenhuma'}</li>
-            </ul>
-            <p>Acesse o painel para mais detalhes.</p>
-          `,
-        };
-
-        transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-            console.error('ERRO AO ENVIAR E-MAIL:', error);
-          } else {
-            console.log('E-mail enviado:', info.response);
-          }
-        });
-
+        // Responde ao utilizador imediatamente
         res.status(201).json({ message: 'Agendamento criado com sucesso!' });
-      } catch (error) {
-        console.error('ERRO AO CRIAR AGENDAMENTO:', error);
+
+        // Tenta enviar o e-mail em segundo plano
+        try {
+          const mailOptions = {
+            from: `"Sistema CJUD" <${process.env.EMAIL_USER}>`,
+            to: EMAIL_FIXO_DESTINO,
+            cc: schedulerEmail,
+            subject: `Confirmação de Agendamento: ${title}`,
+            html: `
+              <h3>Agendamento Criado com Sucesso! (ID: ${novoId})</h3>
+              <p>O agendamento a seguir foi criado por ${schedulerEmail}:</p>
+              <ul>
+                  <li><strong>Título:</strong> ${title}</li>
+                  <li><strong>Período:</strong> ${startDate} ${startTime} a ${endDate} ${endTime}</li>
+                  <li><strong>Local:</strong> ${location}</li>
+                  <li><strong>Equipamentos Solicitados:</strong> ${
+                    equipments.join(', ') || 'Nenhum'
+                  }</li>
+                  <li><strong>Observações:</strong> ${notes || 'Nenhuma'}</li>
+              </ul>
+              <p>Acesse o painel para mais detalhes.</p>
+            `,
+          };
+          await transporter.sendMail(mailOptions);
+          console.log(
+            'E-mail de confirmação enviado com sucesso para o agendamento ID:',
+            novoId
+          );
+        } catch (emailError) {
+          console.error(
+            'ERRO GRAVE AO ENVIAR E-MAIL (AGENDAMENTO ID:',
+            novoId,
+            '):',
+            emailError
+          );
+        }
+      } catch (dbError) {
+        console.error('ERRO AO SALVAR AGENDAMENTO NO BANCO DE DADOS:', dbError);
         res
           .status(500)
           .json({ message: 'Erro interno ao salvar o agendamento.' });

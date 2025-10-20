@@ -22,11 +22,12 @@ async function startServer() {
     const app = express();
     const port = process.env.PORT || 3000;
 
-    app.use(
-      cors({
-        origin: 'https://vianna762.github.io',
-      })
-    );
+    const corsOptions = {
+      origin: 'https://vianna762.github.io',
+    };
+
+    app.use(cors(corsOptions));
+    app.options('*', cors(corsOptions));
 
     app.use(express.json());
 

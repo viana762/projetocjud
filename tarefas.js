@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   const currentUserName = currentUser.name;
-  const userRole = currentUser.role;
 
   const tasksContainer = document.querySelector('.events-container');
   const remindersContainer = document.getElementById('reminders-container');
@@ -43,8 +42,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function setupSidebar() {
-    document.querySelector('.profile-name').textContent = currentUserName;
-    document.querySelector('.profile-role').textContent = userRole;
+    document.querySelector('.profile-name').textContent = currentUser.name;
+    document.querySelector('.profile-role').textContent = currentUser.role;
 
     const logoutButton = document.querySelector('.logout-link a');
     logoutButton.addEventListener('click', function (event) {
@@ -60,34 +59,21 @@ document.addEventListener('DOMContentLoaded', function () {
     const agora = new Date();
     const dismissedReminders =
       JSON.parse(sessionStorage.getItem('dismissedReminders')) || [];
-    const agendamentosAnteriores =
-      JSON.parse(sessionStorage.getItem('previousTasks')) || [];
-    const tarefasAtuaisMap = new Map(agendamentos.map((t) => [t.id, t]));
 
     notificacoes.forEach((notif) => {
       lembretesGerados++;
       remindersContainer.innerHTML += `<div class="reminder-card info"><button class="close-btn notification-btn" data-notification-id="${notif.id}">&times;</button><strong>Notificação:</strong> ${notif.message}</div>`;
     });
 
-    agendamentosAnteriores.forEach((tarefaAnterior) => {
-      const tarefaAtual = tarefasAtuaisMap.get(tarefaAnterior.id);
-      const reminderId = `reminder-${tarefaAnterior.id}-depriority`;
-      if (
-        tarefaAnterior.is_prioritized === 1 &&
-        (!tarefaAtual || tarefaAtual.is_prioritized === 0) &&
-        !dismissedReminders.includes(reminderId)
-      ) {
-        lembretesGerados++;
-        remindersContainer.innerHTML += `<div class="reminder-card info"><button class="close-btn" data-reminder-id="${reminderId}">&times;</button><strong>Informação:</strong> A tarefa "${tarefaAnterior.title}" não é mais uma prioridade.</div>`;
-      }
-    });
     agendamentos.forEach((ag) => {
       const reminderIdBase = `reminder-${ag.id}`;
+
       const priorityId = `${reminderIdBase}-priority`;
       if (ag.is_prioritized && !dismissedReminders.includes(priorityId)) {
         lembretesGerados++;
         remindersContainer.innerHTML += `<div class="reminder-card attention"><button class="close-btn" data-reminder-id="${priorityId}">&times;</button><strong>Atenção!</strong> A tarefa "${ag.title}" foi marcada como prioridade.</div>`;
       }
+
       const timeId = `${reminderIdBase}-time`;
       const eventDate = new Date(`${ag.startDate}T${ag.startTime}`);
       const diffHoras = (eventDate - agora) / (1000 * 60 * 60);
@@ -99,6 +85,7 @@ document.addEventListener('DOMContentLoaded', function () {
         lembretesGerados++;
         remindersContainer.innerHTML += `<div class="reminder-card time"><button class="close-btn" data-reminder-id="${timeId}">&times;</button><strong>Lembrete:</strong> A tarefa "${ag.title}" começa em menos de 24 horas.</div>`;
       }
+
       const notesId = `${reminderIdBase}-notes`;
       if (
         ag.notes &&
@@ -130,8 +117,11 @@ document.addEventListener('DOMContentLoaded', function () {
           )}`
         ),
       ]);
-      if (!tarefasResponse.ok || !notificacoesResponse.ok)
+
+      if (!tarefasResponse.ok || !notificacoesResponse.ok) {
         throw new Error('Falha ao buscar dados do servidor.');
+      }
+
       const agendamentos = await tarefasResponse.json();
       const notificacoes = await notificacoesResponse.json();
 
@@ -141,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (agendamentos.length === 0) {
         tasksContainer.insertAdjacentHTML(
           'beforeend',
-          '<p>Você ainda não se candidatou para nenhuma tarefa futura.</p>'
+          '<p>Você ainda não foi designado para nenhuma tarefa futura.</p>'
         );
       }
 
@@ -166,23 +156,36 @@ document.addEventListener('DOMContentLoaded', function () {
           if (ag.notes && ag.notes.trim() !== '') {
             notesContent = `<div class="notes-section"><strong>Observações:</strong><p>${ag.notes}</p></div>`;
           }
-          notesHTML = `<button class="description-btn" data-target="desc-${ag.id}">DESCRIÇÃO</button><div class="description-content" id="desc-${ag.id}"><div class="description-box"><div class="presence-info"><strong>Presença do Estagiário:</strong> ${presenceText}</div>${notesContent}</div></div>`;
+          notesHTML = `<button class="description-btn" data-target="desc-${ag.id}">DESCRIÇÃO</button><div class="description-content" id="desc-${ag.id}"><div class="description-box"><div class="presence-info"><strong>Presença:</strong> ${presenceText}</div>${notesContent}</div></div>`;
         }
 
-        const cardHTML = `<div class="event-card assigned" data-id="${ag.id}"><div class="event-time"><span class="event-date-short">${intervaloDatas}</span><span>${ag.startTime}</span><span>${ag.endTime}</span></div><div class="event-status-bar"></div><div class="event-details"><span class="event-location">${ag.location}</span><span class="event-title">${ag.title}</span></div><div class="event-equipments">${equipmentsHTML}</div><div class="assign-container"><button class="candidate-btn active" data-id="${ag.id}">Candidatado(a)</button></div>${notesHTML}</div>`;
+        const cardHTML = `
+          <div class="event-card assigned" data-id="${ag.id}">
+            <div class="event-time">
+              <span class="event-date-short">${intervaloDatas}</span>
+              <span>${ag.startTime}</span>
+              <span>${ag.endTime}</span>
+            </div>
+            <div class="event-status-bar"></div>
+            <div class="event-details">
+              <span class="event-location">${ag.location}</span>
+              <span class="event-title">${ag.title}</span>
+            </div>
+            <div class="event-equipments">${equipmentsHTML}</div>
+            <div class="assign-container"><button class="candidate-btn active" data-id="${ag.id}">Remover-me</button></div>
+            ${notesHTML}
+          </div>`;
         tasksContainer.insertAdjacentHTML('beforeend', cardHTML);
       });
 
       gerarLembretes(agendamentos, notificacoes);
-      sessionStorage.setItem('previousTasks', JSON.stringify(agendamentos));
     } catch (error) {
-      console.error('Erro ao carregar tarefas:', error);
       tasksContainer.innerHTML =
         '<h2 class="main-title">AGENDAMENTOS SOB SUA RESPONSABILIDADE</h2><p style="color: red;">Não foi possível carregar suas tarefas.</p>';
     }
   }
 
-  remindersContainer.addEventListener('click', async function (event) {
+  async function handleReminderClick(event) {
     const closeButton = event.target.closest('.close-btn');
     if (closeButton) {
       const notificationId = closeButton.dataset.notificationId;
@@ -192,9 +195,10 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'PUT',
           });
         } catch (error) {
-          console.error('Erro ao marcar notificação como lida', error);
+          // não faz nada se falhar, o usuário não precisa saber
         }
       }
+
       const reminderId = closeButton.dataset.reminderId;
       if (reminderId) {
         let dismissedReminders =
@@ -209,9 +213,9 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       closeButton.parentElement.remove();
     }
-  });
+  }
 
-  document.body.addEventListener('click', async function (event) {
+  async function handleBodyClick(event) {
     const candidateButton = event.target.closest('.candidate-btn');
     if (candidateButton) {
       const id = candidateButton.dataset.id;
@@ -223,7 +227,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         await carregarMinhasTarefas();
       } catch (error) {
-        console.error('Erro ao se descandidatar:', error);
+        // não faz nada
       }
     }
 
@@ -235,9 +239,11 @@ document.addEventListener('DOMContentLoaded', function () {
         content.classList.toggle('show');
       }
     }
-  });
+  }
 
   exibirDataAtual();
   setupSidebar();
   carregarMinhasTarefas();
+  remindersContainer.addEventListener('click', handleReminderClick);
+  document.body.addEventListener('click', handleBodyClick);
 });

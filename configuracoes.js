@@ -1,8 +1,16 @@
-// configuracoes.js
-
 document.addEventListener('DOMContentLoaded', function () {
   const RENDER_URL = 'https://projeto-cjud-backend.onrender.com';
-  // Autenticação e preenchimento da sidebar
+
+  function customAlert(message, isSuccess = true) {
+    const alertBox = document.createElement('div');
+    alertBox.className = `custom-alert ${isSuccess ? 'success' : 'error'}`;
+    alertBox.textContent = message;
+    document.body.appendChild(alertBox);
+    setTimeout(() => {
+      alertBox.remove();
+    }, 3000);
+  }
+
   const currentUserJSON = localStorage.getItem('currentUser');
   if (!currentUserJSON) {
     window.location.href = 'login.html';
@@ -36,12 +44,10 @@ document.addEventListener('DOMContentLoaded', function () {
     window.location.href = 'login.html';
   });
 
-  // Lógica do formulário de alterar nome
   const changeNameForm = document.getElementById('change-name-form');
   const userNameInput = document.getElementById('user-name');
   const nameSuccessMessage = document.getElementById('name-success-message');
 
-  // Preenche o campo de nome com o nome atual do usuário
   userNameInput.value = currentUserName;
 
   if (changeNameForm) {
@@ -72,12 +78,11 @@ document.addEventListener('DOMContentLoaded', function () {
         nameSuccessMessage.textContent = data.message;
         nameSuccessMessage.style.display = 'block';
       } catch (error) {
-        alert(`Erro: ${error.message}`);
+        customAlert(`Erro: ${error.message}`, false);
       }
     });
   }
 
-  // Lógica do formulário de alterar senha
   const changePasswordForm = document.getElementById('change-password-form');
   const passwordErrorMessage = document.getElementById(
     'password-error-message'
@@ -116,9 +121,11 @@ document.addEventListener('DOMContentLoaded', function () {
           passwordErrorMessage.textContent = data.message;
           passwordErrorMessage.style.display = 'block';
         } else {
-          alert(data.message);
-          localStorage.removeItem('currentUser');
-          window.location.href = 'login.html';
+          customAlert(data.message);
+          setTimeout(() => {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'login.html';
+          }, 1500);
         }
       } catch (error) {
         passwordErrorMessage.textContent =

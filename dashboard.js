@@ -65,15 +65,11 @@ document.addEventListener('DOMContentLoaded', function () {
   const assignModal = document.getElementById('assign-modal');
 
   if (!assignModal) {
-    console.error("ID 'assign-modal' não encontrado.");
     return;
   }
 
+  const modalCloseBtn = assignModal.querySelector('.modal-close-btn');
   const modalInternList = document.getElementById('modal-intern-list');
-  const viewUpcomingBtn = document.getElementById('view-upcoming-btn');
-  const viewPastBtn = document.getElementById('view-past-btn');
-  const searchBar = document.getElementById('search-bar');
-  const searchBtn = document.getElementById('search-btn');
 
   function formatarData(dataISO) {
     if (!dataISO) return '';
@@ -147,7 +143,6 @@ document.addEventListener('DOMContentLoaded', function () {
       const agendamentos = await response.json();
       renderizarDashboard(agendamentos, dataSelecionada, view);
     } catch (error) {
-      console.error('Erro ao carregar agendamentos:', error);
       dashboardContainer.innerHTML =
         '<h2 class="main-title">AGENDAMENTOS</h2><p style="color: red;">Não foi possível carregar os agendamentos.</p>';
     }
@@ -343,7 +338,6 @@ document.addEventListener('DOMContentLoaded', function () {
         item.classList.contains('checked') ? 'fa-check-square' : 'fa-square'
       }`;
     } catch (error) {
-      console.error('Erro ao alternar checklist:', error);
       customAlert('Não foi possível atualizar o status do equipamento.', false);
     }
   }
@@ -355,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       await carregarAgendamentos();
     } catch (error) {
-      console.error('Erro ao priorizar:', error);
+      // não faz nada
     }
   }
 
@@ -368,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       await carregarAgendamentos();
     } catch (error) {
-      console.error('Erro ao se candidatar:', error);
+      // não faz nada
     }
   }
 
@@ -382,7 +376,6 @@ document.addEventListener('DOMContentLoaded', function () {
         await carregarAgendamentos();
         customAlert('Agendamento excluído com sucesso!');
       } catch (error) {
-        console.error('Erro ao excluir agendamento:', error);
         customAlert('Não foi possível excluir o agendamento.', false);
       }
     }
@@ -403,7 +396,7 @@ document.addEventListener('DOMContentLoaded', function () {
       renderizarListaModal(responsibleInterns, internNames);
       assignModal.style.display = 'flex';
     } catch (error) {
-      console.error('Erro ao abrir modal de designação:', error);
+      // não faz nada
     }
   }
 
@@ -442,12 +435,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
       renderizarListaModal(updatedInterns, allInterns);
     } catch (error) {
-      console.error('Erro ao designar/remover estagiário:', error);
+      // não faz nada
     }
   }
 
   function setupEventListeners() {
     document.body.addEventListener('click', handleBodyClick);
+
+    const viewUpcomingBtn = document.getElementById('view-upcoming-btn');
+    const viewPastBtn = document.getElementById('view-past-btn');
 
     viewUpcomingBtn.addEventListener('click', () => {
       carregarAgendamentos(null, 'upcoming');
@@ -461,6 +457,7 @@ document.addEventListener('DOMContentLoaded', function () {
       viewUpcomingBtn.classList.remove('active');
     });
 
+    const searchBar = document.getElementById('search-bar');
     searchBar.addEventListener('input', () => {
       const searchTerm = searchBar.value.toLowerCase();
       document.querySelectorAll('.event-card').forEach((card) => {
@@ -470,6 +467,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
 
+    const searchBtn = document.getElementById('search-btn');
     searchBtn.addEventListener('click', (event) => {
       event.stopPropagation();
       searchBar.classList.toggle('active');
@@ -490,85 +488,78 @@ document.addEventListener('DOMContentLoaded', function () {
     window.addEventListener('storage', (event) => {
       if (event.key === 'agendamentoAtualizado') carregarAgendamentos();
     });
-  }
 
-  function setupMiniCalendar() {
-    if (!miniCalendar) return;
+    if (miniCalendar) {
+      let dataAtual = new Date();
+      const calendarMonthYear = document.getElementById('calendar-month-year');
+      const calendarDaysGrid = document.getElementById('calendar-days-grid');
+      const prevMonthBtn = document.getElementById('prev-month-btn');
+      const nextMonthBtn = document.getElementById('next-month-btn');
 
-    let dataAtual = new Date();
-    const calendarMonthYear = document.getElementById('calendar-month-year');
-    const calendarDaysGrid = document.getElementById('calendar-days-grid');
-    const prevMonthBtn = document.getElementById('prev-month-btn');
-    const nextMonthBtn = document.getElementById('next-month-btn');
+      const renderizarCalendario = (ano, mes) => {
+        const nomeDoMes = new Date(ano, mes).toLocaleString('pt-BR', {
+          month: 'long',
+        });
+        calendarMonthYear.textContent = `${
+          nomeDoMes.charAt(0).toUpperCase() + nomeDoMes.slice(1)
+        } ${ano}`;
+        calendarDaysGrid.innerHTML = '';
+        const primeiroDiaDoMes = new Date(ano, mes, 1).getDay();
+        const diasNoMes = new Date(ano, mes + 1, 0).getDate();
 
-    function renderizarCalendario(ano, mes) {
-      const nomeDoMes = new Date(ano, mes).toLocaleString('pt-BR', {
-        month: 'long',
-      });
-      calendarMonthYear.textContent = `${
-        nomeDoMes.charAt(0).toUpperCase() + nomeDoMes.slice(1)
-      } ${ano}`;
-      calendarDaysGrid.innerHTML = '';
-
-      const primeiroDiaDoMes = new Date(ano, mes, 1).getDay();
-      const diasNoMes = new Date(ano, mes + 1, 0).getDate();
-
-      for (let i = 0; i < primeiroDiaDoMes; i++) {
-        calendarDaysGrid.insertAdjacentHTML('beforeend', '<li></li>');
-      }
-
-      for (let dia = 1; dia <= diasNoMes; dia++) {
-        const hoje = new Date();
-        const classeHoje =
-          dia === hoje.getDate() &&
-          mes === hoje.getMonth() &&
-          ano === hoje.getFullYear()
-            ? 'today'
-            : '';
-        calendarDaysGrid.insertAdjacentHTML(
-          'beforeend',
-          `<li class="${classeHoje}">${dia}</li>`
-        );
-      }
-    }
-
-    prevMonthBtn.addEventListener('click', () => {
-      dataAtual.setMonth(dataAtual.getMonth() - 1);
-      renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
-    });
-
-    nextMonthBtn.addEventListener('click', () => {
-      dataAtual.setMonth(dataAtual.getMonth() + 1);
-      renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
-    });
-
-    calendarDaysGrid.addEventListener('click', function (event) {
-      const dayElement = event.target.closest('li');
-      if (dayElement && dayElement.textContent) {
-        const isAlreadyActive = dayElement.classList.contains('active');
-        calendarDaysGrid.querySelector('.active')?.classList.remove('active');
-
-        if (isAlreadyActive) {
-          carregarAgendamentos();
-        } else {
-          const ano = dataAtual.getFullYear();
-          const mes = dataAtual.getMonth() + 1;
-          const dia = dayElement.textContent;
-          const dataISO = `${ano}-${String(mes).padStart(2, '0')}-${String(
-            dia
-          ).padStart(2, '0')}`;
-          carregarAgendamentos(dataISO);
-          dayElement.classList.add('active');
+        for (let i = 0; i < primeiroDiaDoMes; i++) {
+          calendarDaysGrid.insertAdjacentHTML('beforeend', '<li></li>');
         }
-      }
-    });
 
-    renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
+        for (let dia = 1; dia <= diasNoMes; dia++) {
+          const hoje = new Date();
+          const classeHoje =
+            dia === hoje.getDate() &&
+            mes === hoje.getMonth() &&
+            ano === hoje.getFullYear()
+              ? 'today'
+              : '';
+          calendarDaysGrid.insertAdjacentHTML(
+            'beforeend',
+            `<li class="${classeHoje}">${dia}</li>`
+          );
+        }
+      };
+
+      prevMonthBtn.addEventListener('click', () => {
+        dataAtual.setMonth(dataAtual.getMonth() - 1);
+        renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
+      });
+      nextMonthBtn.addEventListener('click', () => {
+        dataAtual.setMonth(dataAtual.getMonth() + 1);
+        renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
+      });
+
+      calendarDaysGrid.addEventListener('click', function (event) {
+        const dayElement = event.target.closest('li');
+        if (dayElement && dayElement.textContent) {
+          const isAlreadyActive = dayElement.classList.contains('active');
+          calendarDaysGrid.querySelector('.active')?.classList.remove('active');
+          if (isAlreadyActive) {
+            carregarAgendamentos();
+          } else {
+            const ano = dataAtual.getFullYear();
+            const mes = dataAtual.getMonth() + 1;
+            const dia = dayElement.textContent;
+            const dataISO = `${ano}-${String(mes).padStart(2, '0')}-${String(
+              dia
+            ).padStart(2, '0')}`;
+            carregarAgendamentos(dataISO);
+            dayElement.classList.add('active');
+          }
+        }
+      });
+      renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
+    }
   }
 
   exibirDataAtual();
   setupSidebar();
   setupEventListeners();
-  setupMiniCalendar();
   carregarAgendamentos();
 });

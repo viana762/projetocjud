@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', function () {
     'new-location-container'
   );
   const saveNewLocationBtn = document.getElementById('save-new-location-btn');
+
   if (addLocationBtn) {
     addLocationBtn.addEventListener('click', function () {
       newLocationContainer.style.display = 'flex';
@@ -36,6 +37,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   }
+
   const startDateInput = document.getElementById('start-date');
   const endDateInput = document.getElementById('end-date');
 
@@ -43,6 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const hoje = new Date().toISOString().split('T')[0];
     if (!isEditMode) {
       startDateInput.min = hoje;
+      endDateInput.min = hoje;
     }
     startDateInput.addEventListener('change', () => {
       endDateInput.min = startDateInput.value;
@@ -51,51 +54,48 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   }
-  setDateRestrictions();
 
-  if (isEditMode) {
+  async function preencherFormularioParaEdicao() {
     document.querySelector('.form-header h1').textContent =
       'Editar Agendamento';
     document.querySelector('button[type="submit"]').textContent =
       'Salvar Alterações';
-    async function preencherFormulario() {
-      try {
-        const response = await fetch(
-          `${RENDER_URL}/agendamentos/${agendamentoId}`
+    try {
+      const response = await fetch(
+        `${RENDER_URL}/agendamentos/${agendamentoId}`
+      );
+      if (!response.ok) return;
+
+      const ag = await response.json();
+      document.getElementById('event-title').value = ag.title;
+      startDateInput.value = ag.startDate;
+      endDateInput.value = ag.endDate;
+      document.getElementById('start-time').value = ag.startTime;
+      document.getElementById('end-time').value = ag.endTime;
+      document.getElementById('event-location').value = ag.location;
+      document.getElementById('event-notes').value = ag.notes;
+
+      const equipments = JSON.parse(ag.equipments);
+      equipments.forEach((equip) => {
+        const checkbox = document.querySelector(
+          `input[name="equip"][value="${equip}"]`
         );
-        if (!response.ok) throw new Error('Agendamento não encontrado.');
-        const ag = await response.json();
-        document.getElementById('event-title').value = ag.title;
-        startDateInput.value = ag.startDate;
-        endDateInput.value = ag.endDate;
-        document.getElementById('start-time').value = ag.startTime;
-        document.getElementById('end-time').value = ag.endTime;
-        document.getElementById('event-location').value = ag.location;
-        document.getElementById('event-notes').value = ag.notes;
-        const equipments = JSON.parse(ag.equipments);
-        equipments.forEach((equip) => {
-          const checkbox = document.querySelector(
-            `input[name="equip"][value="${equip}"]`
-          );
-          if (checkbox) checkbox.checked = true;
-        });
-        const radio = document.querySelector(
-          `input[name="presenca"][value="${ag.presence}"]`
-        );
-        if (radio) radio.checked = true;
-      } catch (error) {
-        console.error('Erro ao buscar dados para edição:', error);
-        alert('Não foi possível carregar os dados para edição.');
-      }
+        if (checkbox) checkbox.checked = true;
+      });
+
+      const radio = document.querySelector(
+        `input[name="presenca"][value="${ag.presence}"]`
+      );
+      if (radio) radio.checked = true;
+    } catch (error) {
+      // não faz nada
     }
-    preencherFormulario();
   }
 
   form.addEventListener('submit', async function (event) {
     event.preventDefault();
 
     if (!isEditMode && !schedulerEmail) {
-      alert('Erro de autenticação: E-mail do agendador não encontrado.');
       return;
     }
 
@@ -125,17 +125,20 @@ document.addEventListener('DOMContentLoaded', function () {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-      const data = await response.json();
 
-      if (!response.ok) throw new Error(data.message);
-
-      alert(data.message);
+      if (!response.ok) {
+        throw new Error('Falha na requisição');
+      }
 
       localStorage.setItem('agendamentoAtualizado', Date.now());
       window.close();
     } catch (error) {
-      console.error('Erro ao salvar agendamento:', error);
-      alert('Ocorreu um erro ao salvar o agendamento.');
+      // não faz nada
     }
   });
+
+  setDateRestrictions();
+  if (isEditMode) {
+    preencherFormularioParaEdicao();
+  }
 });

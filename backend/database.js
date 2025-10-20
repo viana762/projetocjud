@@ -48,10 +48,6 @@ async function setup() {
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
-
-  console.log(
-    'Tabelas de agendamentos, usuários e notificações configuradas com sucesso.'
-  );
 }
 
 module.exports = { openDb, setup };

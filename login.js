@@ -3,7 +3,6 @@ document.addEventListener('DOMContentLoaded', function () {
   const errorMessage = document.getElementById('error-message');
 
   if (!loginForm) {
-    console.error("Elemento com id='login-form' não encontrado.");
     return;
   }
 
@@ -34,8 +33,8 @@ document.addEventListener('DOMContentLoaded', function () {
         window.location.href = 'index.html';
       }
     } catch (error) {
-      console.error('Erro de conexão:', error);
-      errorMessage.textContent = 'Erro ao conectar com o servidor.';
+      errorMessage.textContent =
+        'Erro ao conectar com o servidor. Tente novamente.';
       errorMessage.style.display = 'block';
     }
   });

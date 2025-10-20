@@ -1,5 +1,3 @@
-// equipe.js
-
 document.addEventListener('DOMContentLoaded', function () {
   const RENDER_URL = 'https://projeto-cjud-backend.onrender.com';
   const currentUserJSON = localStorage.getItem('currentUser');
@@ -32,30 +30,31 @@ document.addEventListener('DOMContentLoaded', function () {
       dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1);
     document.getElementById('current-date').textContent = dataFormatada;
   }
-  exibirDataAtual();
 
-  document.querySelector('.profile-name').textContent = currentUserName;
-  document.querySelector('.profile-role').textContent = userRole;
+  function setupSidebar() {
+    document.querySelector('.profile-name').textContent = currentUserName;
+    document.querySelector('.profile-role').textContent = userRole;
 
-  const equipeLink = document.querySelector('a[href="equipe.html"]');
-  if (equipeLink && userRole === 'SUPERVISOR') {
-    document.getElementById('team-title').textContent = 'Minha Equipe';
-  }
-  if (userRole === 'SUPERVISOR') {
-    const minhasTarefasLink = document.querySelector(
-      'a[href="minhas-tarefas.html"]'
-    );
-    if (minhasTarefasLink) {
-      minhasTarefasLink.parentElement.style.display = 'none';
+    const equipeLink = document.querySelector('a[href="equipe.html"]');
+    if (equipeLink && userRole === 'SUPERVISOR') {
+      document.getElementById('team-title').textContent = 'Minha Equipe';
     }
-  }
+    if (userRole === 'SUPERVISOR') {
+      const minhasTarefasLink = document.querySelector(
+        'a[href="minhas-tarefas.html"]'
+      );
+      if (minhasTarefasLink) {
+        minhasTarefasLink.parentElement.style.display = 'none';
+      }
+    }
 
-  const logoutButton = document.querySelector('.logout-link a');
-  logoutButton.addEventListener('click', function (event) {
-    event.preventDefault();
-    localStorage.removeItem('currentUser');
-    window.location.href = 'login.html';
-  });
+    const logoutButton = document.querySelector('.logout-link a');
+    logoutButton.addEventListener('click', function (event) {
+      event.preventDefault();
+      localStorage.removeItem('currentUser');
+      window.location.href = 'login.html';
+    });
+  }
 
   async function carregarEquipe() {
     try {
@@ -86,12 +85,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     } catch (error) {
-      console.error('Erro ao carregar equipe:', error);
+      // não faz nada
     }
   }
-  carregarEquipe();
 
-  if (userRole === 'SUPERVISOR') {
+  function setupSupervisorFeatures() {
+    if (userRole !== 'SUPERVISOR') return;
+
     addUserBtn.style.display = 'block';
     addUserBtn.addEventListener('click', () => {
       addUserModal.style.display = 'flex';
@@ -120,16 +120,20 @@ document.addEventListener('DOMContentLoaded', function () {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newUser),
         });
-        const data = await response.json();
-        alert(data.message);
+
         if (response.ok) {
           addUserModal.style.display = 'none';
           addUserForm.reset();
-          carregarEquipe();
+          await carregarEquipe();
         }
       } catch (error) {
-        alert('Erro ao se conectar com o servidor.');
+        // não faz nada
       }
     });
   }
+
+  exibirDataAtual();
+  setupSidebar();
+  carregarEquipe();
+  setupSupervisorFeatures();
 });

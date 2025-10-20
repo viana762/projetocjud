@@ -4,24 +4,29 @@ const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const { openDb, setup } = require('./database.js');
 
+const EMAIL_FIXO_DESTINO = 'vianagemini99@gmail.com';
+
 const transporter = nodemailer.createTransport({
   host: 'smtp.office365.com',
   port: 587,
   secure: false,
   auth: {
-    user: 'sistema.cjud.agendamentos@outlook.com', // e-mail Outlook
-    pass: 'bwoovrwgiuglpnmm', // senha de aplicativo
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
-
-const EMAIL_FIXO_DESTINO = 'vianagemini99@gmail.com';
 
 async function startServer() {
   try {
     await setup();
     const app = express();
     const port = process.env.PORT || 3000;
-    app.use(cors());
+
+    const corsOptions = {
+      origin: 'https://vianna762.github.io',
+      optionsSuccessStatus: 200,
+    };
+    app.use(cors(corsOptions));
     app.use(express.json());
 
     app.post('/login', async (req, res) => {
@@ -76,16 +81,17 @@ async function startServer() {
     app.post('/users', async (req, res) => {
       try {
         const { name, email, role } = req.body;
-        const defaultPassword = 'mudar123';
-        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+        const hashedPassword = await bcrypt.hash('mudar123', 10);
         const db = await openDb();
         await db.run(
           'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
           [name, email, hashedPassword, role]
         );
-        res.status(201).json({
-          message: `Usuário ${name} criado com sucesso! A senha padrão é 'mudar123'.`,
-        });
+        res
+          .status(201)
+          .json({
+            message: `Usuário ${name} criado com sucesso! A senha padrão é 'mudar123'.`,
+          });
       } catch (error) {
         if (error.code === 'SQLITE_CONSTRAINT') {
           return res
@@ -176,11 +182,11 @@ async function startServer() {
         const novoId = result.lastID;
 
         const mailOptions = {
-          from: `"Sistema CJUD" <${transporter.options.auth.user}>`,
+          from: `"Sistema CJUD Agendamentos" <${process.env.EMAIL_USER}>`,
           to: EMAIL_FIXO_DESTINO,
           cc: schedulerEmail,
           subject: `Confirmação de Agendamento: ${title}`,
-          html: `<h3>Agendamento Criado com Sucesso! (ID: ${novoId})</h3><p>O agendamento a seguir foi criado por ${schedulerEmail}:</p><ul><li><strong>Título:</strong> ${title}</li><li><strong>Período:</strong> ${startDate} ${startTime} a ${endDate} ${endTime}</li><li><strong>Local:</strong> ${location}</li><li><strong>Equipamentos Solicitados:</strong> ${
+          html: `<h3>Agendamento Criado com Sucesso (ID: ${novoId})</h3><p>O agendamento a seguir foi criado por ${schedulerEmail}:</p><ul><li><strong>Título:</strong> ${title}</li><li><strong>Período:</strong> ${startDate} ${startTime} a ${endDate} ${endTime}</li><li><strong>Local:</strong> ${location}</li><li><strong>Equipamentos:</strong> ${
             equipments.join(', ') || 'Nenhum'
           }</li><li><strong>Observações:</strong> ${
             notes || 'Nenhuma'
@@ -213,9 +219,7 @@ async function startServer() {
           'UPDATE agendamentos SET equipments_checked = ? WHERE id = ?',
           [JSON.stringify(equipmentsChecked), id]
         );
-        res.json({
-          message: 'Checklist de equipamentos atualizado com sucesso!',
-        });
+        res.json({ message: 'Checklist de equipamentos atualizado!' });
       } catch (error) {
         console.error('ERRO AO ATUALIZAR CHECKLIST:', error);
         res.status(500).json({ message: 'Erro ao atualizar checklist.' });
@@ -362,21 +366,18 @@ async function startServer() {
           let message = '';
           if (interns.includes(internName)) {
             interns = interns.filter((name) => name !== internName);
-            if (supervisorName) {
+            if (supervisorName)
               message = `O supervisor ${supervisorName} removeu você da tarefa "${agendamento.title}".`;
-            }
           } else {
             interns.push(internName);
-            if (supervisorName) {
+            if (supervisorName)
               message = `O supervisor ${supervisorName} designou você para a tarefa "${agendamento.title}".`;
-            }
           }
-          if (message) {
+          if (message)
             await db.run(
               'INSERT INTO notifications (intern_name, message) VALUES (?, ?)',
               [internName, message]
             );
-          }
           await db.run(
             'UPDATE agendamentos SET responsible_interns = ? WHERE id = ?',
             [JSON.stringify(interns), id]
@@ -385,9 +386,11 @@ async function startServer() {
             message: 'Status de candidatura atualizado com sucesso!',
           });
         } else {
-          res.status(404).json({
-            message: 'Agendamento ou nome do estagiário não fornecido.',
-          });
+          res
+            .status(404)
+            .json({
+              message: 'Agendamento ou nome do estagiário não fornecido.',
+            });
         }
       } catch (error) {
         res.status(500).json({ message: 'Erro ao gerenciar candidatura.' });

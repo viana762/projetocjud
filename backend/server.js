@@ -22,13 +22,8 @@ async function startServer() {
     const app = express();
     const port = process.env.PORT || 3000;
 
-    // --- CONFIGURAÇÃO DE CORS FINAL E ROBUSTA ---
-    const corsOptions = {
-      origin: 'https://vianna762.github.io',
-      methods: ['GET', 'POST', 'PUT', 'DELETE'], // Permite todos os métodos necessários
-      allowedHeaders: ['Content-Type', 'Authorization'], // Permite cabeçalhos comuns
-    };
-    app.use(cors(corsOptions));
+    // --- CONFIGURAÇÃO DE CORS SIMPLIFICADA PARA DEBUG ---
+    app.use(cors());
     // --- FIM DA CONFIGURAÇÃO ---
 
     app.use(express.json());

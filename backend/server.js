@@ -161,7 +161,7 @@ async function startServer() {
         } = req.body;
         const db = await openDb();
         const result = await db.run(
-          'INSERT INTO agendamentos (title, startDate, endDate, startTime, endTime, location, equipments, presence, notes, is_prioritized, responsible_interns) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO agendamentos (title, startDate, endDate, startTime, endTime, location, equipments, presence, notes, is_prioritized, responsible_interns, equipments_checked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             title,
             startDate,
@@ -174,7 +174,8 @@ async function startServer() {
             notes,
             0,
             '[]',
-          ]
+            '[]',
+          ] // Valor inicial '[]'
         );
         const novoId = result.lastID;
 

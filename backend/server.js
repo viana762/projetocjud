@@ -3,9 +3,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const { openDb, setup } = require('./database.js');
-const fs = require('fs');
-const path = require('path');
-const { exec } = require('child_process');
+// REMOVIDO: fs, path, exec (não são mais necessários)
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.office365.com',
@@ -19,27 +17,91 @@ const transporter = nodemailer.createTransport({
 
 const EMAIL_FIXO_DESTINO = 'vianagemini99@gmail.com';
 
+// --- COPIADO DO SEED.JS ---
+const usersToCreate = [
+  {
+    name: 'Maikon Pagani',
+    email: 'mmpagani@tjrs.jus.br',
+    password: 'cjud@321',
+    role: 'SUPERVISOR',
+  },
+  {
+    name: 'Cassius Côrtes',
+    email: 'ccortes@tjrs.jus.br',
+    password: 'cjud@321',
+    role: 'SUPERVISOR',
+  },
+  {
+    name: 'Quetlin Pavinatto',
+    email: 'qpavinatto@tjrs.jus.br',
+    password: 'cjud@321',
+    role: 'ESTAGIARIO',
+  },
+  {
+    name: 'Lian Fernandes',
+    email: 'lianfernandes@tjrs.jus.br',
+    password: 'cjud@321',
+    role: 'ESTAGIARIO',
+  },
+  {
+    name: 'Guilherme Ferreira',
+    email: 'guilhermef@tjrs.jus.br',
+    password: 'cjud@321',
+    role: 'ESTAGIARIO',
+  },
+  {
+    name: 'Guilherme Viana',
+    email: 'gvcamargo@tjrs.jus.br',
+    password: 'cjud@321',
+    role: 'ESTAGIARIO',
+  },
+];
+
+async function seedUsersIfNeeded() {
+  console.log('[SEED] A verificar utilizadores...');
+  const db = await openDb();
+  // Verifica se já existem utilizadores para evitar re-seed desnecessário em alguns casos
+  const firstUser = await db.get('SELECT id FROM users LIMIT 1');
+  if (!firstUser) {
+    console.log(
+      '[SEED] Base de dados de utilizadores vazia. A executar seed...'
+    );
+    // Limpa explicitamente (embora deva estar vazia)
+    await db.run('DELETE FROM users');
+    for (const user of usersToCreate) {
+      const hashedPassword = await bcrypt.hash(user.password, 10);
+      await db.run(
+        `INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`,
+        [user.name, user.email, hashedPassword, user.role]
+      );
+      console.log(`[SEED] - Utilizador '${user.name}' criado.`);
+    }
+    console.log('[SEED] Todos os utilizadores padrão foram (re)criados!');
+  } else {
+    console.log('[SEED] Utilizadores já existem. Seed não executado.');
+  }
+}
+// --- FIM DO CÓDIGO DO SEED.JS ---
+
 async function startServer() {
   try {
-    await setup();
+    await setup(); // Garante que as tabelas existem
+    await seedUsersIfNeeded(); // Garante que os utilizadores padrão existem
+
     const app = express();
     const port = process.env.PORT || 3000;
 
     app.use(cors());
-
     app.use(express.json());
 
-    // ROTA DE LOGIN COM DEBUGGING
     app.post('/login', async (req, res) => {
       try {
         const { email, password } = req.body;
-        // DEBUG: Log received email
-        console.log(`[DEBUG /login] Recebido email: '${email}'`); // Adicionado aspas para ver espaços
+        console.log(`[DEBUG /login] Recebido email: '${email}'`);
         const db = await openDb();
         const user = await db.get('SELECT * FROM users WHERE email = ?', [
           email,
         ]);
-        // DEBUG: Log database query result
         console.log(
           `[DEBUG /login] Resultado da busca no DB para '${email}':`,
           user ? 'Utilizador Encontrado' : 'Utilizador NÃO Encontrado'
@@ -53,7 +115,6 @@ async function startServer() {
         }
 
         const isPasswordCorrect = await bcrypt.compare(password, user.password);
-        // DEBUG: Log password comparison result
         console.log(
           `[DEBUG /login] Comparação de senha para '${email}': ${
             isPasswordCorrect ? 'Correta' : 'Incorreta'
@@ -80,7 +141,8 @@ async function startServer() {
         res.status(500).json({ message: 'Erro interno do servidor.' });
       }
     });
-    // FIM DA ROTA DE LOGIN COM DEBUGGING
+
+    // ... (RESTO DAS ROTAS - /equipe, /estagiarios, /users, /agendamentos, etc - CONTINUAM IGUAIS) ...
 
     app.get('/equipe', async (req, res) => {
       try {

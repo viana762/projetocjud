@@ -3,6 +3,9 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const { openDb, setup } = require('./database.js');
+const fs = require('fs'); // Necessário para interagir com ficheiros
+const path = require('path'); // Necessário para caminhos de ficheiros
+const { exec } = require('child_process'); // Para executar comandos
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.office365.com',
@@ -25,6 +28,28 @@ async function startServer() {
     app.use(cors());
 
     app.use(express.json());
+
+    // --- ROTA TEMPORÁRIA PARA EXECUTAR O SEED ---
+    // ACESSE https://projeto-cjud-backend.onrender.com/run-seed UMA VEZ
+    // DEPOIS REMOVA ESTA ROTA E FAÇA DEPLOY NOVAMENTE!
+    app.get('/run-seed', (req, res) => {
+      console.log('A executar o script seed.js...');
+      exec('node seed.js', (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Erro ao executar seed.js: ${error.message}`);
+          return res
+            .status(500)
+            .send(`Erro ao executar seed: ${error.message}`);
+        }
+        if (stderr) {
+          console.error(`Erro (stderr) ao executar seed.js: ${stderr}`);
+          // Não retorna erro aqui, pois pode ser apenas um aviso
+        }
+        console.log(`Saída do seed.js: ${stdout}`);
+        res.send(`Script seed.js executado com sucesso! Saída:\n${stdout}`);
+      });
+    });
+    // --- FIM DA ROTA TEMPORÁRIA ---
 
     app.post('/login', async (req, res) => {
       try {
@@ -175,7 +200,7 @@ async function startServer() {
             0,
             '[]',
             '[]',
-          ] // Valor inicial '[]'
+          ]
         );
         const novoId = result.lastID;
 

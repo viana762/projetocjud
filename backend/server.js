@@ -3,9 +3,9 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const { openDb, setup } = require('./database.js');
-const fs = require('fs'); // Necessário para interagir com ficheiros
-const path = require('path'); // Necessário para caminhos de ficheiros
-const { exec } = require('child_process'); // Para executar comandos
+const fs = require('fs');
+const path = require('path');
+const { exec } = require('child_process');
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.office365.com',
@@ -29,28 +29,58 @@ async function startServer() {
 
     app.use(express.json());
 
+    // ROTA DE LOGIN COM DEBUGGING
     app.post('/login', async (req, res) => {
       try {
         const { email, password } = req.body;
+        // DEBUG: Log received email
+        console.log(`[DEBUG /login] Recebido email: '${email}'`); // Adicionado aspas para ver espaços
         const db = await openDb();
         const user = await db.get('SELECT * FROM users WHERE email = ?', [
           email,
         ]);
+        // DEBUG: Log database query result
+        console.log(
+          `[DEBUG /login] Resultado da busca no DB para '${email}':`,
+          user ? 'Utilizador Encontrado' : 'Utilizador NÃO Encontrado'
+        );
+
         if (!user) {
+          console.error(
+            `[ERROR /login] Email não encontrado no DB: '${email}'`
+          );
           return res.status(404).json({ message: 'E-mail não encontrado.' });
         }
+
         const isPasswordCorrect = await bcrypt.compare(password, user.password);
+        // DEBUG: Log password comparison result
+        console.log(
+          `[DEBUG /login] Comparação de senha para '${email}': ${
+            isPasswordCorrect ? 'Correta' : 'Incorreta'
+          }`
+        );
+
         if (!isPasswordCorrect) {
+          console.warn(
+            `[WARN /login] Senha incorreta para o email: '${email}'`
+          );
           return res.status(401).json({ message: 'Senha incorreta.' });
         }
+
+        console.log(`[INFO /login] Login bem-sucedido para: '${email}'`);
         res.json({
           message: 'Login bem-sucedido!',
           user: { name: user.name, role: user.role, email: user.email },
         });
       } catch (error) {
+        console.error(
+          '[FATAL /login] Erro inesperado na rota de login:',
+          error
+        );
         res.status(500).json({ message: 'Erro interno do servidor.' });
       }
     });
+    // FIM DA ROTA DE LOGIN COM DEBUGGING
 
     app.get('/equipe', async (req, res) => {
       try {
@@ -88,9 +118,11 @@ async function startServer() {
           'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
           [name, email, hashedPassword, role]
         );
-        res.status(201).json({
-          message: `Usuário ${name} criado com sucesso! A senha padrão é 'mudar123'.`,
-        });
+        res
+          .status(201)
+          .json({
+            message: `Usuário ${name} criado com sucesso! A senha padrão é 'mudar123'.`,
+          });
       } catch (error) {
         if (error.code === 'SQLITE_CONSTRAINT') {
           return res
@@ -405,9 +437,11 @@ async function startServer() {
             message: 'Status de candidatura atualizado com sucesso!',
           });
         } else {
-          res.status(404).json({
-            message: 'Agendamento ou nome do estagiário não fornecido.',
-          });
+          res
+            .status(404)
+            .json({
+              message: 'Agendamento ou nome do estagiário não fornecido.',
+            });
         }
       } catch (error) {
         res.status(500).json({ message: 'Erro ao gerenciar candidatura.' });

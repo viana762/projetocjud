@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const RENDER_URL = 'https://projeto-cjud-backend.onrender.com';
 
   function customAlert(message, isSuccess = true) {
+    document
+      .querySelectorAll('.custom-alert')
+      .forEach((alert) => alert.remove());
     const alertBox = document.createElement('div');
     alertBox.className = `custom-alert ${isSuccess ? 'success' : 'error'}`;
     alertBox.textContent = message;
@@ -13,19 +16,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function customConfirm(message) {
     return new Promise((resolve) => {
+      document
+        .querySelectorAll('.custom-confirm-overlay')
+        .forEach((overlay) => overlay.remove());
       const confirmOverlay = document.createElement('div');
       confirmOverlay.className = 'custom-confirm-overlay';
-
       const confirmBox = document.createElement('div');
       confirmBox.className = 'custom-confirm-box';
-
       const messageP = document.createElement('p');
       messageP.textContent = message;
       confirmBox.appendChild(messageP);
-
       const btnContainer = document.createElement('div');
       btnContainer.className = 'custom-confirm-buttons';
-
       const yesButton = document.createElement('button');
       yesButton.textContent = 'Sim';
       yesButton.className = 'confirm-yes';
@@ -33,7 +35,6 @@ document.addEventListener('DOMContentLoaded', function () {
         confirmOverlay.remove();
         resolve(true);
       };
-
       const noButton = document.createElement('button');
       noButton.textContent = 'Não';
       noButton.className = 'confirm-no';
@@ -41,7 +42,6 @@ document.addEventListener('DOMContentLoaded', function () {
         confirmOverlay.remove();
         resolve(false);
       };
-
       btnContainer.appendChild(noButton);
       btnContainer.appendChild(yesButton);
       confirmBox.appendChild(btnContainer);
@@ -64,26 +64,41 @@ document.addEventListener('DOMContentLoaded', function () {
   const miniCalendar = document.querySelector('.mini-calendar');
   const assignModal = document.getElementById('assign-modal');
 
-  if (!assignModal) {
+  if (!dashboardContainer || !prioritizedList || !assignModal) {
+    console.error(
+      'Erro crítico: Um ou mais elementos essenciais do Dashboard não foram encontrados.'
+    );
     return;
   }
 
-  const modalCloseBtn = assignModal.querySelector('.modal-close-btn');
   const modalInternList = document.getElementById('modal-intern-list');
+  if (!modalInternList) {
+    console.error(
+      "Erro Crítico: O elemento da lista de estagiários no modal (id='modal-intern-list') não foi encontrado."
+    );
+  }
 
   function formatarData(dataISO) {
     if (!dataISO) return '';
-    const [ano, mes, dia] = dataISO.split('-');
-    return `${dia}/${mes}/${ano}`;
+    try {
+      const [ano, mes, dia] = dataISO.split('-');
+      return `${dia}/${mes}/${ano}`;
+    } catch (e) {
+      return dataISO;
+    }
   }
   function formatarIntervaloDatas(startDate, endDate) {
     if (!startDate || !endDate) return '';
-    const [startDia, startMes] = startDate.split('-').reverse().slice(0, 2);
-    const [endDia, endMes] = endDate.split('-').reverse().slice(0, 2);
-    if (startDate === endDate) {
-      return `${startDia}/${startMes}`;
+    try {
+      const [startDia, startMes] = startDate.split('-').reverse().slice(0, 2);
+      const [endDia, endMes] = endDate.split('-').reverse().slice(0, 2);
+      if (startDate === endDate) {
+        return `${startDia}/${startMes}`;
+      }
+      return `${startDia}/${startMes} a ${endDia}/${endMes}`;
+    } catch (e) {
+      return `${startDate} a ${endDate}`;
     }
-    return `${startDia}/${startMes} a ${endDia}/${endMes}`;
   }
 
   function exibirDataAtual() {
@@ -95,19 +110,24 @@ document.addEventListener('DOMContentLoaded', function () {
       day: 'numeric',
     };
     let dataFormatada = hoje.toLocaleDateString('pt-BR', options);
-    document.getElementById('current-date').textContent =
-      dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1);
+    const dateElement = document.getElementById('current-date');
+    if (dateElement) {
+      dateElement.textContent =
+        dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1);
+    }
   }
 
   function setupSidebar() {
-    document.querySelector('.profile-name').textContent = currentUserName;
-    document.querySelector('.profile-role').textContent = userRole;
+    const profileNameEl = document.querySelector('.profile-name');
+    const profileRoleEl = document.querySelector('.profile-role');
+    if (profileNameEl) profileNameEl.textContent = currentUserName;
+    if (profileRoleEl) profileRoleEl.textContent = userRole;
 
     if (userRole === 'SUPERVISOR') {
       const minhasTarefasLink = document.querySelector(
         'a[href="minhas-tarefas.html"]'
       );
-      if (minhasTarefasLink) {
+      if (minhasTarefasLink && minhasTarefasLink.parentElement) {
         minhasTarefasLink.parentElement.style.display = 'none';
       }
       const equipeLink = document.querySelector('a[href="equipe.html"]');
@@ -116,12 +136,14 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
 
-    const logoutButton = document.querySelector('.logout-link a');
-    logoutButton.addEventListener('click', function (event) {
-      event.preventDefault();
-      localStorage.removeItem('currentUser');
-      window.location.href = 'login.html';
-    });
+    const logoutLink = document.querySelector('.logout-link a');
+    if (logoutLink) {
+      logoutLink.addEventListener('click', function (event) {
+        event.preventDefault();
+        localStorage.removeItem('currentUser');
+        window.location.href = 'login.html';
+      });
+    }
   }
 
   async function carregarAgendamentos(
@@ -138,18 +160,27 @@ document.addEventListener('DOMContentLoaded', function () {
       if (queryString) url += `?${queryString}`;
 
       const response = await fetch(url);
-      if (!response.ok) throw new Error('Falha ao buscar dados do servidor.');
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Server response error:', response.status, errorData);
+        throw new Error(
+          `Falha ao buscar dados do servidor (${response.status})`
+        );
+      }
 
       const agendamentos = await response.json();
       renderizarDashboard(agendamentos, dataSelecionada, view);
     } catch (error) {
+      console.error('Erro detalhado ao carregar agendamentos:', error);
       dashboardContainer.innerHTML =
-        '<h2 class="main-title">AGENDAMENTOS</h2><p style="color: red;">Não foi possível carregar os agendamentos.</p>';
+        '<h2 class="main-title">AGENDAMENTOS</h2><p style="color: red;">Não foi possível carregar os agendamentos. Verifique o console (F12) para mais detalhes.</p>';
     }
   }
 
   function renderizarDashboard(agendamentos, dataSelecionada, view) {
     const mainTitle = dashboardContainer.querySelector('.main-title');
+    if (!mainTitle) return;
+
     if (dataSelecionada)
       mainTitle.textContent = `AGENDAMENTOS PARA ${formatarData(
         dataSelecionada
@@ -158,31 +189,92 @@ document.addEventListener('DOMContentLoaded', function () {
       mainTitle.textContent = 'HISTÓRICO DE AGENDAMENTOS';
     else mainTitle.textContent = 'PRÓXIMOS AGENDAMENTOS';
 
-    document.querySelectorAll('.event-card').forEach((card) => card.remove());
-    const noEventsMessage = dashboardContainer.querySelector('p');
-    if (noEventsMessage) noEventsMessage.remove();
+    document
+      .querySelectorAll('.event-card, .event-group-title')
+      .forEach((el) => el.remove());
+    const oldNoEventsMessage =
+      dashboardContainer.querySelector('.no-events-message');
+    if (oldNoEventsMessage) oldNoEventsMessage.remove();
 
     prioritizedList.innerHTML = '';
     let prioritizedCount = 0;
 
-    if (agendamentos.length === 0) {
+    if (!agendamentos || agendamentos.length === 0) {
       dashboardContainer.insertAdjacentHTML(
         'beforeend',
-        '<p>Nenhum agendamento encontrado.</p>'
+        '<p class="no-events-message">Nenhum agendamento encontrado.</p>'
       );
-    }
+    } else {
+      const groupedEvents = {};
+      const ungroupedEvents = [];
 
-    agendamentos.forEach((ag) => {
-      const cardHTML = criarCardHTML(ag);
-      dashboardContainer.insertAdjacentHTML('beforeend', cardHTML);
+      agendamentos.forEach((ag) => {
+        if (ag.grupo_evento && ag.grupo_evento.trim() !== '') {
+          if (!groupedEvents[ag.grupo_evento]) {
+            groupedEvents[ag.grupo_evento] = [];
+          }
+          groupedEvents[ag.grupo_evento].push(ag);
+        } else {
+          ungroupedEvents.push(ag);
+        }
+      });
 
-      if (ag.is_prioritized && view !== 'past') {
-        prioritizedCount++;
-        const dataFormatada = formatarData(ag.startDate);
-        const prioritizedItemHTML = `<div class="prioritized-item"><strong>${dataFormatada} - ${ag.startTime}h:</strong> ${ag.title} (${ag.location})</div>`;
-        prioritizedList.insertAdjacentHTML('beforeend', prioritizedItemHTML);
+      for (const groupName in groupedEvents) {
+        dashboardContainer.insertAdjacentHTML(
+          'beforeend',
+          `<h3 class="event-group-title">${groupName}</h3>`
+        );
+        groupedEvents[groupName].forEach((ag) => {
+          try {
+            const cardHTML = criarCardHTML(ag);
+            dashboardContainer.insertAdjacentHTML('beforeend', cardHTML);
+            if (ag.is_prioritized && view !== 'past') {
+              prioritizedCount++;
+              const dataFormatada = formatarData(ag.startDate);
+              prioritizedList.insertAdjacentHTML(
+                'beforeend',
+                `<div class="prioritized-item"><strong>${dataFormatada} - ${ag.startTime}h:</strong> ${ag.title} (${ag.location})</div>`
+              );
+            }
+          } catch (cardError) {
+            console.error(
+              `Erro ao criar card para agendamento ID ${ag.id}:`,
+              cardError
+            );
+            dashboardContainer.insertAdjacentHTML(
+              'beforeend',
+              `<div class="event-card error-card">Erro ao carregar este agendamento (ID: ${ag.id}).</div>`
+            );
+          }
+        });
       }
-    });
+
+      ungroupedEvents.forEach((ag) => {
+        try {
+          const cardHTML = criarCardHTML(ag);
+          dashboardContainer.insertAdjacentHTML('beforeend', cardHTML);
+
+          if (ag.is_prioritized && view !== 'past') {
+            prioritizedCount++;
+            const dataFormatada = formatarData(ag.startDate);
+            const prioritizedItemHTML = `<div class="prioritized-item"><strong>${dataFormatada} - ${ag.startTime}h:</strong> ${ag.title} (${ag.location})</div>`;
+            prioritizedList.insertAdjacentHTML(
+              'beforeend',
+              prioritizedItemHTML
+            );
+          }
+        } catch (cardError) {
+          console.error(
+            `Erro ao criar card para agendamento ID ${ag.id}:`,
+            cardError
+          );
+          dashboardContainer.insertAdjacentHTML(
+            'beforeend',
+            `<div class="event-card error-card">Erro ao carregar este agendamento (ID: ${ag.id}).</div>`
+          );
+        }
+      });
+    }
 
     if (prioritizedCount === 0) {
       prioritizedList.innerHTML =
@@ -191,48 +283,82 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function criarCardHTML(ag) {
-    const equipments = JSON.parse(ag.equipments);
+    const equipments = JSON.parse(ag.equipments || '[]');
     const checkedEquipments = JSON.parse(ag.equipments_checked || '[]');
-    const interns = JSON.parse(ag.responsible_interns);
+    const interns = JSON.parse(ag.responsible_interns || '[]');
 
     let equipmentsHTML = '';
-    if (userRole === 'SUPERVISOR' && equipments.length > 0) {
-      const checklistItems = equipments
-        .map((eq) => {
-          const isChecked = checkedEquipments.includes(eq);
+    const equipmentItemsHTML = equipments
+      .map((eq) => {
+        const safeEq = String(eq);
+        if (userRole === 'SUPERVISOR') {
+          const isChecked = checkedEquipments.includes(safeEq);
           return `<span class="equip-check-item ${
             isChecked ? 'checked' : ''
-          }" data-equip="${eq}">
+          }" data-equip="${safeEq}">
                   <i class="fas ${
                     isChecked ? 'fa-check-square' : 'fa-square'
-                  }"></i> ${eq}
+                  }"></i> ${safeEq}
                 </span>`;
-        })
-        .join('');
-      equipmentsHTML = `<div class="equipment-checklist-container" data-id="${ag.id}">${checklistItems}</div>`;
-    } else {
-      equipmentsHTML = `<div class="event-equipments">${equipments
-        .map((eq) => `<span class="equip-item">${eq}</span>`)
-        .join('')}</div>`;
+        } else {
+          return `<span class="equip-item">${safeEq}</span>`;
+        }
+      })
+      .join('');
+
+    if (equipments.length > 0) {
+      equipmentsHTML = `<div class="${
+        userRole === 'SUPERVISOR'
+          ? 'equipment-checklist-container'
+          : 'event-equipments'
+      }" data-id="${ag.id}">${equipmentItemsHTML}</div>`;
     }
 
-    let assignHTML = '';
+    let topRightActionsHTML = '';
     if (userRole === 'ESTAGIARIO') {
-      assignHTML = `<div class="assign-container"><button class="candidate-btn ${
-        interns.includes(currentUserName) ? 'active' : ''
-      }" data-id="${ag.id}">${
-        interns.includes(currentUserName) ? 'Candidatado(a)' : 'Candidatar-se'
-      }</button></div>`;
+      const isCandidato = interns.includes(currentUserName);
+      topRightActionsHTML = `
+          <div class="assign-container">
+            <button class="candidate-btn ${
+              isCandidato ? 'active' : ''
+            }" data-id="${ag.id}">
+              ${isCandidato ? 'Candidatado(a)' : 'Candidatar-se'}
+            </button>
+          </div>`;
     } else if (userRole === 'SUPERVISOR') {
       let internListHTML =
         interns.length > 0
-          ? interns.map((name) => `<li>${name}</li>`).join('')
-          : '<span class="none">Nenhum responsável</span>';
-      assignHTML = `<div class="assign-container responsible-list"><h4><span>Responsáveis:</span><button class="add-responsible-btn" data-id="${ag.id}" title="Designar estagiário">+</button></h4><ul>${internListHTML}</ul></div>`;
+          ? interns.map((name) => `<li>${String(name)}</li>`).join('')
+          : '<span class="none">Nenhum</span>';
+      const assignBlock = `
+          <div class="responsible-list">
+            <h4><span>Responsáveis:</span><button class="add-responsible-btn" data-id="${ag.id}" title="Designar">+</button></h4>
+            <ul>${internListHTML}</ul>
+          </div>`;
+
+      const supervisorButtons = `
+          <div class="supervisor-actions">
+            <div class="icon-button-group">
+              <button class="delete-btn" data-id="${
+                ag.id
+              }" title="Excluir"><i class="fas fa-trash-alt"></i></button>
+              <a href="form.html?id=${
+                ag.id
+              }" target="_blank" rel="noopener noreferrer" class="edit-btn" title="Editar"><i class="fas fa-pencil-alt"></i></a>
+              <button class="duplicate-btn" data-id="${
+                ag.id
+              }" title="Duplicar"><i class="fas fa-copy"></i></button>
+            </div>
+            <button class="priority-btn ${
+              ag.is_prioritized ? 'active' : ''
+            }" data-id="${ag.id}" title="Priorizar">Prioridade</button>
+          </div>`;
+
+      topRightActionsHTML = assignBlock + supervisorButtons;
     }
 
-    let notesHTML = '';
-    if ((ag.notes && ag.notes.trim() !== '') || ag.presence) {
+    let descriptionBlockHTML = '';
+    if ((ag.notes && String(ag.notes).trim() !== '') || ag.presence) {
       const presenceMap = {
         inicio: 'Apenas no início',
         integral: 'Tempo integral',
@@ -240,80 +366,109 @@ document.addEventListener('DOMContentLoaded', function () {
       };
       const presenceText = presenceMap[ag.presence] || 'Não especificado';
       let notesContent = ag.notes
-        ? `<div class="notes-section"><strong>Observações:</strong><p>${ag.notes}</p></div>`
+        ? `<div class="notes-section"><strong>Observações:</strong><p>${String(
+            ag.notes
+          )}</p></div>`
         : '';
-      notesHTML = `<button class="description-btn" data-target="desc-${ag.id}">DESCRIÇÃO</button><div class="description-content" id="desc-${ag.id}"><div class="description-box"><div class="presence-info"><strong>Presença:</strong> ${presenceText}</div>${notesContent}</div></div>`;
+      const descriptionId = `desc-${ag.id}`;
+      descriptionBlockHTML = `
+          <div class="description-content" id="${descriptionId}">
+            <div class="description-box">
+              <div class="presence-info"><strong>Presença de Estagiário:</strong> ${presenceText}</div> 
+              ${notesContent}
+            </div>
+          </div>
+          <button class="description-btn" data-target="${descriptionId}">DESCRIÇÃO</button>
+        `;
     }
 
-    let supervisorActionsHTML = '';
-    if (userRole === 'SUPERVISOR') {
-      supervisorActionsHTML = `
-        <div class="supervisor-actions">
-          <div class="icon-button-group">
-            <button class="delete-btn" data-id="${
-              ag.id
-            }" title="Excluir"><i class="fas fa-trash-alt"></i></button>
-            <a href="form.html?id=${
-              ag.id
-            }" target="_blank" class="edit-btn" title="Editar"><i class="fas fa-pencil-alt"></i></a>
-          </div>
-          <button class="priority-btn ${
-            ag.is_prioritized ? 'active' : ''
-          }" data-id="${ag.id}" title="Priorizar">PRIORIDADE</button>
-        </div>`;
-    }
+    const location = ag.location || 'Local não definido';
+    const title = ag.title || 'Título não definido';
+    const startTime = ag.startTime || '--:--';
+    const endTime = ag.endTime || '--:--';
 
     return `
       <div class="event-card" data-id="${ag.id}">
-        <div class="event-time">
-          <span class="event-date-short">${formatarIntervaloDatas(
-            ag.startDate,
-            ag.endDate
-          )}</span>
-          <span>${ag.startTime}</span><span>${ag.endTime}</span>
+        <div class="event-header">
+          <div class="event-time">
+            <span class="event-date-short">${formatarIntervaloDatas(
+              ag.startDate,
+              ag.endDate
+            )}</span>
+            <span>${startTime}</span><span>${endTime}</span>
+          </div>
+          <div class="event-status-bar"></div>
+          <div class="event-details">
+            <span class="event-location">${location}</span>
+            <span class="event-title">${title}</span>
+            ${
+              ag.grupo_evento
+                ? `<span class="event-group-tag">${ag.grupo_evento}</span>`
+                : ''
+            }
+          </div>
+          ${equipmentsHTML} 
+          <div class="event-top-right-actions">
+             ${topRightActionsHTML}
+          </div>
         </div>
-        <div class="event-status-bar"></div>
-        <div class="event-details">
-          <span class="event-location">${ag.location}</span>
-          <span class="event-title">${ag.title}</span>
-        </div>
-        ${equipmentsHTML}
-        <div class="event-actions-row">${assignHTML}${supervisorActionsHTML}</div>
-        ${notesHTML}
+        ${descriptionBlockHTML} 
       </div>`;
   }
 
   async function handleBodyClick(event) {
-    const checkItem = event.target.closest('.equip-check-item');
+    const targetElement = event.target;
+
+    const checkItem = targetElement.closest('.equip-check-item');
     if (checkItem) return await toggleChecklistItem(checkItem);
 
-    const priorityButton = event.target.closest('.priority-btn');
+    const priorityButton = targetElement.closest('.priority-btn');
     if (priorityButton) return await togglePriority(priorityButton.dataset.id);
 
-    const candidateButton = event.target.closest('.candidate-btn');
+    const candidateButton = targetElement.closest('.candidate-btn');
     if (candidateButton)
       return await toggleCandidacy(candidateButton.dataset.id);
 
-    const deleteButton = event.target.closest('.delete-btn');
+    const deleteButton = targetElement.closest('.delete-btn');
     if (deleteButton) return await deleteAgendamento(deleteButton.dataset.id);
 
-    const descriptionToggle = event.target.closest('.description-btn');
-    if (descriptionToggle)
-      return descriptionToggle.nextElementSibling.classList.toggle('show');
+    const duplicateButton = targetElement.closest('.duplicate-btn');
+    if (duplicateButton) {
+      window.open(
+        `form.html?duplicateId=${duplicateButton.dataset.id}`,
+        '_blank'
+      );
+      return;
+    }
 
-    const addResponsibleBtn = event.target.closest('.add-responsible-btn');
+    const descriptionToggle = targetElement.closest('.description-btn');
+    if (descriptionToggle) {
+      const targetId = descriptionToggle.dataset.target;
+      const content = document.getElementById(targetId);
+      if (content) content.classList.toggle('show');
+      return;
+    }
+
+    const addResponsibleBtn = targetElement.closest('.add-responsible-btn');
     if (addResponsibleBtn)
       return await openAssignModal(addResponsibleBtn.dataset.id);
   }
 
   async function toggleChecklistItem(item) {
-    const agendamentoId = item.closest('.equipment-checklist-container').dataset
-      .id;
+    if (!item) return;
+    const container = item.closest('.equipment-checklist-container');
+    if (!container || !container.dataset.id) return;
+
+    const agendamentoId = container.dataset.id;
     const equipName = item.dataset.equip;
+    if (!agendamentoId || !equipName) return;
+
     try {
       const response = await fetch(
         `${RENDER_URL}/agendamentos/${agendamentoId}`
       );
+      if (!response.ok)
+        throw new Error('Agendamento não encontrado para checklist');
       const ag = await response.json();
       let checkedEquipments = JSON.parse(ag.equipments_checked || '[]');
 
@@ -334,26 +489,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
       item.classList.toggle('checked');
       const icon = item.querySelector('i');
-      icon.className = `fas ${
-        item.classList.contains('checked') ? 'fa-check-square' : 'fa-square'
-      }`;
+      if (icon)
+        icon.className = `fas ${
+          item.classList.contains('checked') ? 'fa-check-square' : 'fa-square'
+        }`;
     } catch (error) {
+      console.error('Erro ao alternar checklist:', error);
       customAlert('Não foi possível atualizar o status do equipamento.', false);
     }
   }
 
   async function togglePriority(id) {
+    if (!id) return;
     try {
       await fetch(`${RENDER_URL}/agendamentos/${id}/prioritize`, {
         method: 'PUT',
       });
       await carregarAgendamentos();
     } catch (error) {
-      // não faz nada
+      console.error('Erro ao priorizar:', error);
     }
   }
 
   async function toggleCandidacy(id) {
+    if (!id) return;
     try {
       await fetch(`${RENDER_URL}/agendamentos/${id}/assign`, {
         method: 'PUT',
@@ -362,11 +521,12 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       await carregarAgendamentos();
     } catch (error) {
-      // não faz nada
+      console.error('Erro ao se candidatar:', error);
     }
   }
 
   async function deleteAgendamento(id) {
+    if (!id) return;
     const querExcluir = await customConfirm(
       'Tem certeza que deseja excluir este agendamento?'
     );
@@ -376,35 +536,52 @@ document.addEventListener('DOMContentLoaded', function () {
         await carregarAgendamentos();
         customAlert('Agendamento excluído com sucesso!');
       } catch (error) {
+        console.error('Erro ao excluir agendamento:', error);
         customAlert('Não foi possível excluir o agendamento.', false);
       }
     }
   }
 
   async function openAssignModal(agendamentoId) {
+    if (!agendamentoId || !assignModal || !modalInternList) return;
+
     assignModal.dataset.agendamentoId = agendamentoId;
     try {
       const [internsResponse, agendamentoResponse] = await Promise.all([
         fetch(`${RENDER_URL}/estagiarios`),
         fetch(`${RENDER_URL}/agendamentos/${agendamentoId}`),
       ]);
-      const allInterns = await internsResponse.json();
+
+      if (!internsResponse.ok || !agendamentoResponse.ok) {
+        throw new Error('Falha ao buscar dados para o modal');
+      }
+
+      const allInternsResult = await internsResponse.json();
       const agendamento = await agendamentoResponse.json();
-      const internNames = allInterns.map((intern) => intern.name);
-      const responsibleInterns = JSON.parse(agendamento.responsible_interns);
+      const internNames = Array.isArray(allInternsResult)
+        ? allInternsResult.map((intern) => intern.name)
+        : [];
+      const responsibleInterns = JSON.parse(
+        agendamento.responsible_interns || '[]'
+      );
 
       renderizarListaModal(responsibleInterns, internNames);
       assignModal.style.display = 'flex';
     } catch (error) {
-      // não faz nada
+      console.error('Erro ao abrir modal de designação:', error);
+      customAlert('Não foi possível carregar a lista de estagiários.', false);
     }
   }
 
   function renderizarListaModal(responsibleInterns, allInterns) {
+    if (!modalInternList) return;
     modalInternList.innerHTML = '';
+    if (!Array.isArray(allInterns)) return;
+
     allInterns.forEach((internName) => {
-      const isAssigned = responsibleInterns.includes(internName);
-      modalInternList.innerHTML += `<li data-name="${internName}">${internName} <i class="fas ${
+      const safeInternName = String(internName);
+      const isAssigned = responsibleInterns.includes(safeInternName);
+      modalInternList.innerHTML += `<li data-name="${safeInternName}">${safeInternName} <i class="fas ${
         isAssigned ? 'fa-user-minus' : 'fa-user-plus'
       }"></i></li>`;
     });
@@ -412,30 +589,40 @@ document.addEventListener('DOMContentLoaded', function () {
 
   async function handleModalListClick(event) {
     const internListItem = event.target.closest('li');
-    if (!internListItem) return;
+    if (!internListItem || !assignModal) return;
 
     const internName = internListItem.dataset.name;
     const agendamentoId = assignModal.dataset.agendamentoId;
+
+    if (!internName || !agendamentoId) return;
+
     try {
       await fetch(`${RENDER_URL}/agendamentos/${agendamentoId}/assign`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ internName, supervisorName: currentUserName }),
       });
-      await carregarAgendamentos();
 
       const updatedResponse = await fetch(
         `${RENDER_URL}/agendamentos/${agendamentoId}`
       );
+      if (!updatedResponse.ok)
+        throw new Error('Falha ao buscar agendamento atualizado');
       const updatedAgendamento = await updatedResponse.json();
-      const updatedInterns = JSON.parse(updatedAgendamento.responsible_interns);
-      const allInterns = Array.from(modalInternList.children).map(
+      const updatedInterns = JSON.parse(
+        updatedAgendamento.responsible_interns || '[]'
+      );
+
+      const allInternsInModal = Array.from(modalInternList.children).map(
         (li) => li.dataset.name
       );
 
-      renderizarListaModal(updatedInterns, allInterns);
+      renderizarListaModal(updatedInterns, allInternsInModal);
+
+      carregarAgendamentos();
     } catch (error) {
-      // não faz nada
+      console.error('Erro ao designar/remover estagiário:', error);
+      customAlert('Erro ao atualizar responsáveis.', false);
     }
   }
 
@@ -445,45 +632,65 @@ document.addEventListener('DOMContentLoaded', function () {
     const viewUpcomingBtn = document.getElementById('view-upcoming-btn');
     const viewPastBtn = document.getElementById('view-past-btn');
 
-    viewUpcomingBtn.addEventListener('click', () => {
-      carregarAgendamentos(null, 'upcoming');
-      viewUpcomingBtn.classList.add('active');
-      viewPastBtn.classList.remove('active');
-    });
+    if (viewUpcomingBtn && viewPastBtn) {
+      viewUpcomingBtn.addEventListener('click', () => {
+        carregarAgendamentos(null, 'upcoming');
+        viewUpcomingBtn.classList.add('active');
+        viewPastBtn.classList.remove('active');
+      });
 
-    viewPastBtn.addEventListener('click', () => {
-      carregarAgendamentos(null, 'past');
-      viewPastBtn.classList.add('active');
-      viewUpcomingBtn.classList.remove('active');
-    });
+      viewPastBtn.addEventListener('click', () => {
+        carregarAgendamentos(null, 'past');
+        viewPastBtn.classList.add('active');
+        viewUpcomingBtn.classList.remove('active');
+      });
+    }
 
     const searchBar = document.getElementById('search-bar');
-    searchBar.addEventListener('input', () => {
-      const searchTerm = searchBar.value.toLowerCase();
-      document.querySelectorAll('.event-card').forEach((card) => {
-        card.style.display = card.textContent.toLowerCase().includes(searchTerm)
-          ? 'flex'
-          : 'none';
+    if (searchBar) {
+      searchBar.addEventListener('input', () => {
+        const searchTerm = searchBar.value.toLowerCase();
+        document
+          .querySelectorAll('.event-card, .event-group-title')
+          .forEach((el) => {
+            if (el.classList.contains('event-group-title')) {
+              el.style.display = 'block'; // Keep group titles always visible or add logic
+              return;
+            }
+            if (el && el.textContent) {
+              el.style.display = el.textContent
+                .toLowerCase()
+                .includes(searchTerm)
+                ? 'flex'
+                : 'none';
+            }
+          });
       });
-    });
+    }
 
     const searchBtn = document.getElementById('search-btn');
-    searchBtn.addEventListener('click', (event) => {
-      event.stopPropagation();
-      searchBar.classList.toggle('active');
-      if (searchBar.classList.contains('active')) searchBar.focus();
-    });
+    if (searchBtn && searchBar) {
+      searchBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        searchBar.classList.toggle('active');
+        if (searchBar.classList.contains('active')) searchBar.focus();
+      });
+    }
 
-    assignModal.addEventListener('click', (event) => {
-      if (
-        event.target === assignModal ||
-        event.target.closest('.modal-close-btn')
-      ) {
-        assignModal.style.display = 'none';
-      }
-    });
+    if (assignModal) {
+      assignModal.addEventListener('click', (event) => {
+        if (
+          event.target === assignModal ||
+          event.target.closest('.modal-close-btn')
+        ) {
+          assignModal.style.display = 'none';
+        }
+      });
+    }
 
-    modalInternList.addEventListener('click', handleModalListClick);
+    if (modalInternList) {
+      modalInternList.addEventListener('click', handleModalListClick);
+    }
 
     window.addEventListener('storage', (event) => {
       if (event.key === 'agendamentoAtualizado') carregarAgendamentos();
@@ -496,65 +703,72 @@ document.addEventListener('DOMContentLoaded', function () {
       const prevMonthBtn = document.getElementById('prev-month-btn');
       const nextMonthBtn = document.getElementById('next-month-btn');
 
-      const renderizarCalendario = (ano, mes) => {
-        const nomeDoMes = new Date(ano, mes).toLocaleString('pt-BR', {
-          month: 'long',
-        });
-        calendarMonthYear.textContent = `${
-          nomeDoMes.charAt(0).toUpperCase() + nomeDoMes.slice(1)
-        } ${ano}`;
-        calendarDaysGrid.innerHTML = '';
-        const primeiroDiaDoMes = new Date(ano, mes, 1).getDay();
-        const diasNoMes = new Date(ano, mes + 1, 0).getDate();
-
-        for (let i = 0; i < primeiroDiaDoMes; i++) {
-          calendarDaysGrid.insertAdjacentHTML('beforeend', '<li></li>');
-        }
-
-        for (let dia = 1; dia <= diasNoMes; dia++) {
-          const hoje = new Date();
-          const classeHoje =
-            dia === hoje.getDate() &&
-            mes === hoje.getMonth() &&
-            ano === hoje.getFullYear()
-              ? 'today'
-              : '';
-          calendarDaysGrid.insertAdjacentHTML(
-            'beforeend',
-            `<li class="${classeHoje}">${dia}</li>`
-          );
-        }
-      };
-
-      prevMonthBtn.addEventListener('click', () => {
-        dataAtual.setMonth(dataAtual.getMonth() - 1);
-        renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
-      });
-      nextMonthBtn.addEventListener('click', () => {
-        dataAtual.setMonth(dataAtual.getMonth() + 1);
-        renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
-      });
-
-      calendarDaysGrid.addEventListener('click', function (event) {
-        const dayElement = event.target.closest('li');
-        if (dayElement && dayElement.textContent) {
-          const isAlreadyActive = dayElement.classList.contains('active');
-          calendarDaysGrid.querySelector('.active')?.classList.remove('active');
-          if (isAlreadyActive) {
-            carregarAgendamentos();
-          } else {
-            const ano = dataAtual.getFullYear();
-            const mes = dataAtual.getMonth() + 1;
-            const dia = dayElement.textContent;
-            const dataISO = `${ano}-${String(mes).padStart(2, '0')}-${String(
-              dia
-            ).padStart(2, '0')}`;
-            carregarAgendamentos(dataISO);
-            dayElement.classList.add('active');
+      if (
+        calendarMonthYear &&
+        calendarDaysGrid &&
+        prevMonthBtn &&
+        nextMonthBtn
+      ) {
+        const renderizarCalendario = (ano, mes) => {
+          const nomeDoMes = new Date(ano, mes).toLocaleString('pt-BR', {
+            month: 'long',
+          });
+          calendarMonthYear.textContent = `${
+            nomeDoMes.charAt(0).toUpperCase() + nomeDoMes.slice(1)
+          } ${ano}`;
+          calendarDaysGrid.innerHTML = '';
+          const primeiroDiaDoMes = new Date(ano, mes, 1).getDay();
+          const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+          for (let i = 0; i < primeiroDiaDoMes; i++) {
+            calendarDaysGrid.insertAdjacentHTML('beforeend', '<li></li>');
           }
-        }
-      });
-      renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
+          for (let dia = 1; dia <= diasNoMes; dia++) {
+            const hoje = new Date();
+            const classeHoje =
+              dia === hoje.getDate() &&
+              mes === hoje.getMonth() &&
+              ano === hoje.getFullYear()
+                ? 'today'
+                : '';
+            calendarDaysGrid.insertAdjacentHTML(
+              'beforeend',
+              `<li class="${classeHoje}">${dia}</li>`
+            );
+          }
+        };
+
+        prevMonthBtn.addEventListener('click', () => {
+          dataAtual.setMonth(dataAtual.getMonth() - 1);
+          renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
+        });
+        nextMonthBtn.addEventListener('click', () => {
+          dataAtual.setMonth(dataAtual.getMonth() + 1);
+          renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
+        });
+
+        calendarDaysGrid.addEventListener('click', function (event) {
+          const dayElement = event.target.closest('li');
+          if (dayElement && dayElement.textContent) {
+            const isAlreadyActive = dayElement.classList.contains('active');
+            calendarDaysGrid
+              .querySelector('.active')
+              ?.classList.remove('active');
+            if (isAlreadyActive) {
+              carregarAgendamentos();
+            } else {
+              const ano = dataAtual.getFullYear();
+              const mes = dataAtual.getMonth() + 1;
+              const dia = dayElement.textContent;
+              const dataISO = `${ano}-${String(mes).padStart(2, '0')}-${String(
+                dia
+              ).padStart(2, '0')}`;
+              carregarAgendamentos(dataISO);
+              dayElement.classList.add('active');
+            }
+          }
+        });
+        renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
+      }
     }
   }
 

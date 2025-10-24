@@ -1,6 +1,6 @@
 const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
-const fs = require('fs'); // Necessário para interagir com ficheiros
+const fs = require('fs');
 
 async function openDb() {
   return open({
@@ -12,21 +12,6 @@ async function openDb() {
 async function setup() {
   const db = await openDb();
 
-  // --- LINHA TEMPORÁRIA PARA FORÇAR RECRIAÇÃO ---
-  // Esta linha apaga a tabela 'agendamentos' se ela existir.
-  // REMOVA esta linha após o primeiro deploy bem-sucedido!
-  try {
-    await db.exec('DROP TABLE IF EXISTS agendamentos');
-    console.log('Tabela agendamentos antiga removida (se existia).');
-  } catch (dropError) {
-    console.error(
-      'Erro ao tentar remover tabela antiga (ignorado):',
-      dropError
-    );
-  }
-  // --- FIM DA LINHA TEMPORÁRIA ---
-
-  // Cria a tabela 'agendamentos' com a estrutura correta (inclui equipments_checked)
   await db.exec(`
           CREATE TABLE IF NOT EXISTS agendamentos (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,11 +26,11 @@ async function setup() {
               notes TEXT,
               is_prioritized INTEGER DEFAULT 0,
               responsible_interns TEXT DEFAULT '[]',
-              equipments_checked TEXT DEFAULT '[]' 
+              equipments_checked TEXT DEFAULT '[]',
+              grupo_evento TEXT NULL 
           )
       `);
 
-  // Tabelas 'users' e 'notifications' (sem mudanças)
   await db.exec(`
           CREATE TABLE IF NOT EXISTS users (
               id INTEGER PRIMARY KEY AUTOINCREMENT,

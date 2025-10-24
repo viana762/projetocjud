@@ -3,7 +3,6 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const { openDb, setup } = require('./database.js');
-// REMOVIDO: fs, path, exec (não são mais necessários)
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.office365.com',
@@ -17,7 +16,6 @@ const transporter = nodemailer.createTransport({
 
 const EMAIL_FIXO_DESTINO = 'vianagemini99@gmail.com';
 
-// --- COPIADO DO SEED.JS ---
 const usersToCreate = [
   {
     name: 'Maikon Pagani',
@@ -60,13 +58,11 @@ const usersToCreate = [
 async function seedUsersIfNeeded() {
   console.log('[SEED] A verificar utilizadores...');
   const db = await openDb();
-  // Verifica se já existem utilizadores para evitar re-seed desnecessário em alguns casos
   const firstUser = await db.get('SELECT id FROM users LIMIT 1');
   if (!firstUser) {
     console.log(
       '[SEED] Base de dados de utilizadores vazia. A executar seed...'
     );
-    // Limpa explicitamente (embora deva estar vazia)
     await db.run('DELETE FROM users');
     for (const user of usersToCreate) {
       const hashedPassword = await bcrypt.hash(user.password, 10);
@@ -81,12 +77,11 @@ async function seedUsersIfNeeded() {
     console.log('[SEED] Utilizadores já existem. Seed não executado.');
   }
 }
-// --- FIM DO CÓDIGO DO SEED.JS ---
 
 async function startServer() {
   try {
-    await setup(); // Garante que as tabelas existem
-    await seedUsersIfNeeded(); // Garante que os utilizadores padrão existem
+    await setup();
+    await seedUsersIfNeeded();
 
     const app = express();
     const port = process.env.PORT || 3000;
@@ -97,52 +92,29 @@ async function startServer() {
     app.post('/login', async (req, res) => {
       try {
         const { email, password } = req.body;
-        console.log(`[DEBUG /login] Recebido email: '${email}'`);
         const db = await openDb();
         const user = await db.get('SELECT * FROM users WHERE email = ?', [
           email,
         ]);
-        console.log(
-          `[DEBUG /login] Resultado da busca no DB para '${email}':`,
-          user ? 'Utilizador Encontrado' : 'Utilizador NÃO Encontrado'
-        );
 
         if (!user) {
-          console.error(
-            `[ERROR /login] Email não encontrado no DB: '${email}'`
-          );
           return res.status(404).json({ message: 'E-mail não encontrado.' });
         }
 
         const isPasswordCorrect = await bcrypt.compare(password, user.password);
-        console.log(
-          `[DEBUG /login] Comparação de senha para '${email}': ${
-            isPasswordCorrect ? 'Correta' : 'Incorreta'
-          }`
-        );
 
         if (!isPasswordCorrect) {
-          console.warn(
-            `[WARN /login] Senha incorreta para o email: '${email}'`
-          );
           return res.status(401).json({ message: 'Senha incorreta.' });
         }
 
-        console.log(`[INFO /login] Login bem-sucedido para: '${email}'`);
         res.json({
           message: 'Login bem-sucedido!',
           user: { name: user.name, role: user.role, email: user.email },
         });
       } catch (error) {
-        console.error(
-          '[FATAL /login] Erro inesperado na rota de login:',
-          error
-        );
         res.status(500).json({ message: 'Erro interno do servidor.' });
       }
     });
-
-    // ... (RESTO DAS ROTAS - /equipe, /estagiarios, /users, /agendamentos, etc - CONTINUAM IGUAIS) ...
 
     app.get('/equipe', async (req, res) => {
       try {
@@ -253,10 +225,11 @@ async function startServer() {
           presence,
           notes,
           schedulerEmail,
+          grupo_evento,
         } = req.body;
         const db = await openDb();
         const result = await db.run(
-          'INSERT INTO agendamentos (title, startDate, endDate, startTime, endTime, location, equipments, presence, notes, is_prioritized, responsible_interns, equipments_checked) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO agendamentos (title, startDate, endDate, startTime, endTime, location, equipments, presence, notes, is_prioritized, responsible_interns, equipments_checked, grupo_evento) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             title,
             startDate,
@@ -270,6 +243,7 @@ async function startServer() {
             0,
             '[]',
             '[]',
+            grupo_evento || null,
           ]
         );
         const novoId = result.lastID;
@@ -287,6 +261,9 @@ async function startServer() {
               <p>O agendamento a seguir foi criado por ${schedulerEmail}:</p>
               <ul>
                   <li><strong>Título:</strong> ${title}</li>
+                  <li><strong>Grupo do Evento:</strong> ${
+                    grupo_evento || 'N/A'
+                  }</li>
                   <li><strong>Período:</strong> ${startDate} ${startTime} a ${endDate} ${endTime}</li>
                   <li><strong>Local:</strong> ${location}</li>
                   <li><strong>Equipamentos Solicitados:</strong> ${
@@ -417,9 +394,10 @@ async function startServer() {
           equipments,
           presence,
           notes,
+          grupo_evento,
         } = req.body;
         await db.run(
-          `UPDATE agendamentos SET title = ?, startDate = ?, endDate = ?, startTime = ?, endTime = ?, location = ?, equipments = ?, presence = ?, notes = ? WHERE id = ?`,
+          `UPDATE agendamentos SET title = ?, startDate = ?, endDate = ?, startTime = ?, endTime = ?, location = ?, equipments = ?, presence = ?, notes = ?, grupo_evento = ? WHERE id = ?`,
           [
             title,
             startDate,
@@ -430,6 +408,7 @@ async function startServer() {
             JSON.stringify(equipments),
             presence,
             notes,
+            grupo_evento || null,
             id,
           ]
         );

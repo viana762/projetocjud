@@ -36,12 +36,16 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="start-time">Horário de Início</label
-            ><input type="time" id="start-time" name="start-time" required />
+            <label for="start-time">Horário de Início</label>
+            <select id="start-time" name="start-time" required>
+              <option value="" disabled selected>Selecione...</option>
+            </select>
           </div>
           <div class="form-group">
-            <label for="end-time">Horário de Fim</label
-            ><input type="time" id="end-time" name="end-time" required />
+            <label for="end-time">Horário de Fim</label>
+            <select id="end-time" name="end-time" required>
+              <option value="" disabled selected>Selecione...</option>
+            </select>
           </div>
         </div>
         <div class="form-group">
@@ -81,32 +85,52 @@
             </button>
           </div>
         </div>
+
+        <div class="form-group">
+          <label for="grupo-evento">Nome Principal do Evento (Opcional)</label
+          ><input
+            type="text"
+            id="grupo-evento"
+            name="grupo-evento"
+            placeholder="Ex: Capacitação XYZ"
+          />
+        </div>
+
         <div class="form-group">
           <label>Equipamentos Necessários</label>
           <div class="checkbox-group">
             <label
-              ><input type="checkbox" name="equip" value="Projetor" />
-              <span>Projetor</span></label
+              ><input type="checkbox" name="equip" value="Projetor" /><span
+                >Projetor</span
+              ></label
             >
             <label
-              ><input type="checkbox" name="equip" value="Sistema de Som" />
-              <span>Sistema de Som</span></label
+              ><input
+                type="checkbox"
+                name="equip"
+                value="Sistema de Som"
+              /><span>Sistema de Som</span></label
             >
             <label
-              ><input type="checkbox" name="equip" value="Microfone sem Fio" />
-              <span>Microfone sem Fio</span></label
+              ><input
+                type="checkbox"
+                name="equip"
+                value="Microfone sem Fio"
+              /><span>Microfone sem Fio</span></label
             >
             <label
-              ><input type="checkbox" name="equip" value="Passador de Slides" />
-              <span>Passador de Slides</span></label
+              ><input
+                type="checkbox"
+                name="equip"
+                value="Passador de Slides"
+              /><span>Passador de Slides</span></label
             >
             <label
               ><input
                 type="checkbox"
                 name="equip"
                 value="Webcam para Transmissão"
-              />
-              <span>Webcam para Transmissão</span></label
+              /><span>Webcam para Transmissão</span></label
             >
           </div>
         </div>

@@ -29,28 +29,6 @@ async function startServer() {
 
     app.use(express.json());
 
-    // --- ROTA TEMPORÁRIA PARA EXECUTAR O SEED ---
-    // ACESSE https://projeto-cjud-backend.onrender.com/run-seed UMA VEZ
-    // DEPOIS REMOVA ESTA ROTA E FAÇA DEPLOY NOVAMENTE!
-    app.get('/run-seed', (req, res) => {
-      console.log('A executar o script seed.js...');
-      exec('node seed.js', (error, stdout, stderr) => {
-        if (error) {
-          console.error(`Erro ao executar seed.js: ${error.message}`);
-          return res
-            .status(500)
-            .send(`Erro ao executar seed: ${error.message}`);
-        }
-        if (stderr) {
-          console.error(`Erro (stderr) ao executar seed.js: ${stderr}`);
-          // Não retorna erro aqui, pois pode ser apenas um aviso
-        }
-        console.log(`Saída do seed.js: ${stdout}`);
-        res.send(`Script seed.js executado com sucesso! Saída:\n${stdout}`);
-      });
-    });
-    // --- FIM DA ROTA TEMPORÁRIA ---
-
     app.post('/login', async (req, res) => {
       try {
         const { email, password } = req.body;
@@ -110,11 +88,9 @@ async function startServer() {
           'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
           [name, email, hashedPassword, role]
         );
-        res
-          .status(201)
-          .json({
-            message: `Usuário ${name} criado com sucesso! A senha padrão é 'mudar123'.`,
-          });
+        res.status(201).json({
+          message: `Usuário ${name} criado com sucesso! A senha padrão é 'mudar123'.`,
+        });
       } catch (error) {
         if (error.code === 'SQLITE_CONSTRAINT') {
           return res
@@ -429,11 +405,9 @@ async function startServer() {
             message: 'Status de candidatura atualizado com sucesso!',
           });
         } else {
-          res
-            .status(404)
-            .json({
-              message: 'Agendamento ou nome do estagiário não fornecido.',
-            });
+          res.status(404).json({
+            message: 'Agendamento ou nome do estagiário não fornecido.',
+          });
         }
       } catch (error) {
         res.status(500).json({ message: 'Erro ao gerenciar candidatura.' });

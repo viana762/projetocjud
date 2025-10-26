@@ -53,16 +53,20 @@ const usersToCreate = [
     password: 'cjud@321',
     role: 'ESTAGIARIO',
   },
+  {
+    name: 'TESTE GESTOR',
+    email: 'testegestor@tjrs.jus.br',
+    password: 'cjud@321',
+    role: 'GESTOR_DE_CURSO',
+  },
 ];
 
 async function seedUsersIfNeeded() {
-  console.log('[SEED] A verificar utilizadores...');
   const db = await openDb();
+
   const firstUser = await db.get('SELECT id FROM users LIMIT 1');
+
   if (!firstUser) {
-    console.log(
-      '[SEED] Base de dados de utilizadores vazia. A executar seed...'
-    );
     await db.run('DELETE FROM users');
     for (const user of usersToCreate) {
       const hashedPassword = await bcrypt.hash(user.password, 10);
@@ -70,18 +74,39 @@ async function seedUsersIfNeeded() {
         `INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)`,
         [user.name, user.email, hashedPassword, user.role]
       );
-      console.log(`[SEED] - Utilizador '${user.name}' criado.`);
     }
-    console.log('[SEED] Todos os utilizadores padrão foram (re)criados!');
-  } else {
-    console.log('[SEED] Utilizadores já existem. Seed não executado.');
   }
+}
+
+async function cleanOldGestorNotifications() {
+  const db = await openDb();
+  const fortyEightHoursAgo = new Date(
+    Date.now() - 48 * 60 * 60 * 1000
+  ).toISOString();
+  await db.run('DELETE FROM gestor_notifications WHERE created_at < ?', [
+    fortyEightHoursAgo,
+  ]);
+}
+
+async function createGestorNotification(
+  gestorEmail,
+  agendamentoId,
+  message,
+  type
+) {
+  const db = await openDb();
+  await db.run(
+    'INSERT INTO gestor_notifications (gestor_email, agendamento_id, message, type) VALUES (?, ?, ?, ?)',
+    [gestorEmail, agendamentoId, message, type]
+  );
 }
 
 async function startServer() {
   try {
     await setup();
     await seedUsersIfNeeded();
+
+    setInterval(cleanOldGestorNotifications, 60 * 60 * 1000);
 
     const app = express();
     const port = process.env.PORT || 3000;
@@ -212,6 +237,30 @@ async function startServer() {
       }
     });
 
+    app.delete('/users/:email', async (req, res) => {
+      try {
+        const db = await openDb();
+        const emailToDelete = req.params.email;
+
+        const result = await db.run('DELETE FROM users WHERE email = ?', [
+          emailToDelete,
+        ]);
+
+        if (result.changes === 0) {
+          return res
+            .status(404)
+            .json({ message: 'Usuário não encontrado ou já excluído.' });
+        }
+
+        res.json({
+          message: `Usuário com email ${emailToDelete} excluído com sucesso!`,
+        });
+      } catch (error) {
+        console.error('ERRO AO EXCLUIR USUÁRIO:', error);
+        res.status(500).json({ message: 'Erro interno ao excluir o usuário.' });
+      }
+    });
+
     app.post('/agendamentos', async (req, res) => {
       try {
         const {
@@ -229,7 +278,7 @@ async function startServer() {
         } = req.body;
         const db = await openDb();
         const result = await db.run(
-          'INSERT INTO agendamentos (title, startDate, endDate, startTime, endTime, location, equipments, presence, notes, is_prioritized, responsible_interns, equipments_checked, grupo_evento) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO agendamentos (title, startDate, endDate, startTime, endTime, location, equipments, presence, notes, is_prioritized, responsible_interns, equipments_checked, grupo_evento, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             title,
             startDate,
@@ -244,9 +293,22 @@ async function startServer() {
             '[]',
             '[]',
             grupo_evento || null,
+            schedulerEmail,
           ]
         );
         const novoId = result.lastID;
+
+        const user = await db.get('SELECT role FROM users WHERE email = ?', [
+          schedulerEmail,
+        ]);
+        if (user && user.role === 'GESTOR_DE_CURSO') {
+          await createGestorNotification(
+            schedulerEmail,
+            novoId,
+            `Seu agendamento "${title}" foi criado com sucesso!`,
+            'created'
+          );
+        }
 
         res.status(201).json({ message: 'Agendamento criado com sucesso!' });
 
@@ -256,29 +318,15 @@ async function startServer() {
             to: EMAIL_FIXO_DESTINO,
             cc: schedulerEmail,
             subject: `Confirmação de Agendamento: ${title}`,
-            html: `
-              <h3>Agendamento Criado com Sucesso! (ID: ${novoId})</h3>
-              <p>O agendamento a seguir foi criado por ${schedulerEmail}:</p>
-              <ul>
-                  <li><strong>Título:</strong> ${title}</li>
-                  <li><strong>Grupo do Evento:</strong> ${
-                    grupo_evento || 'N/A'
-                  }</li>
-                  <li><strong>Período:</strong> ${startDate} ${startTime} a ${endDate} ${endTime}</li>
-                  <li><strong>Local:</strong> ${location}</li>
-                  <li><strong>Equipamentos Solicitados:</strong> ${
-                    equipments.join(', ') || 'Nenhum'
-                  }</li>
-                  <li><strong>Observações:</strong> ${notes || 'Nenhuma'}</li>
-              </ul>
-              <p>Acesse o painel para mais detalhes.</p>
-            `,
+            html: `<h3>Agendamento Criado com Sucesso! (ID: ${novoId})</h3><p>O agendamento a seguir foi criado por ${schedulerEmail}:</p><ul><li><strong>Título:</strong> ${title}</li><li><strong>Grupo do Evento:</strong> ${
+              grupo_evento || 'N/A'
+            }</li><li><strong>Período:</strong> ${startDate} ${startTime} a ${endDate} ${endTime}</li><li><strong>Local:</strong> ${location}</li><li><strong>Equipamentos Solicitados:</strong> ${
+              equipments.join(', ') || 'Nenhum'
+            }</li><li><strong>Observações:</strong> ${
+              notes || 'Nenhuma'
+            }</li></ul><p>Acesse o painel para mais detalhes.</p>`,
           };
           await transporter.sendMail(mailOptions);
-          console.log(
-            'E-mail de confirmação enviado com sucesso para o agendamento ID:',
-            novoId
-          );
         } catch (emailError) {
           console.error(
             'ERRO GRAVE AO ENVIAR E-MAIL (AGENDAMENTO ID:',
@@ -299,11 +347,40 @@ async function startServer() {
       try {
         const db = await openDb();
         const { id } = req.params;
-        const { equipmentsChecked } = req.body;
+        const { equipmentsChecked, internName, equipmentName } = req.body;
+
+        const agendamento = await db.get(
+          'SELECT title, created_by FROM agendamentos WHERE id = ?',
+          [id]
+        );
+
         await db.run(
           'UPDATE agendamentos SET equipments_checked = ? WHERE id = ?',
           [JSON.stringify(equipmentsChecked), id]
         );
+
+        if (
+          agendamento &&
+          agendamento.created_by &&
+          internName &&
+          equipmentName
+        ) {
+          const user = await db.get('SELECT role FROM users WHERE email = ?', [
+            agendamento.created_by,
+          ]);
+          if (user && user.role === 'GESTOR_DE_CURSO') {
+            const action = equipmentsChecked.includes(equipmentName)
+              ? 'marcou'
+              : 'desmarcou';
+            await createGestorNotification(
+              agendamento.created_by,
+              id,
+              `${internName} ${action} o equipamento "${equipmentName}" no agendamento "${agendamento.title}"`,
+              'equipment_check'
+            );
+          }
+        }
+
         res.json({
           message: 'Checklist de equipamentos atualizado com sucesso!',
         });
@@ -379,7 +456,6 @@ async function startServer() {
         res.status(500).json({ message: 'Erro ao buscar agendamento.' });
       }
     });
-
     app.put('/agendamentos/:id', async (req, res) => {
       try {
         const db = await openDb();
@@ -395,7 +471,15 @@ async function startServer() {
           presence,
           notes,
           grupo_evento,
+          editorEmail,
+          editorRole,
         } = req.body;
+
+        const agendamento = await db.get(
+          'SELECT title, created_by, responsible_interns FROM agendamentos WHERE id = ?',
+          [id]
+        );
+
         await db.run(
           `UPDATE agendamentos SET title = ?, startDate = ?, endDate = ?, startTime = ?, endTime = ?, location = ?, equipments = ?, presence = ?, notes = ?, grupo_evento = ? WHERE id = ?`,
           [
@@ -412,6 +496,46 @@ async function startServer() {
             id,
           ]
         );
+
+        if (agendamento && editorEmail) {
+          const interns = JSON.parse(agendamento.responsible_interns || '[]');
+
+          if (editorRole === 'GESTOR_DE_CURSO') {
+            for (const internName of interns) {
+              await db.run(
+                'INSERT INTO notifications (intern_name, message) VALUES (?, ?)',
+                [
+                  internName,
+                  `O agendamento "${agendamento.title}" foi editado pelo gestor.`,
+                ]
+              );
+            }
+          } else if (editorRole === 'SUPERVISOR' && agendamento.created_by) {
+            const creator = await db.get(
+              'SELECT role FROM users WHERE email = ?',
+              [agendamento.created_by]
+            );
+            if (creator && creator.role === 'GESTOR_DE_CURSO') {
+              await createGestorNotification(
+                agendamento.created_by,
+                id,
+                `Seu agendamento "${agendamento.title}" foi editado por um supervisor.`,
+                'edited'
+              );
+            }
+
+            for (const internName of interns) {
+              await db.run(
+                'INSERT INTO notifications (intern_name, message) VALUES (?, ?)',
+                [
+                  internName,
+                  `O agendamento "${agendamento.title}" foi editado.`,
+                ]
+              );
+            }
+          }
+        }
+
         res.json({ message: 'Agendamento atualizado com sucesso!' });
       } catch (error) {
         res.status(500).json({ message: 'Erro ao atualizar agendamento.' });
@@ -423,7 +547,7 @@ async function startServer() {
         const db = await openDb();
         const { id } = req.params;
         const agendamento = await db.get(
-          'SELECT is_prioritized FROM agendamentos WHERE id = ?',
+          'SELECT is_prioritized, title, created_by FROM agendamentos WHERE id = ?',
           [id]
         );
         if (agendamento) {
@@ -432,6 +556,22 @@ async function startServer() {
             'UPDATE agendamentos SET is_prioritized = ? WHERE id = ?',
             [novoStatus, id]
           );
+
+          if (novoStatus === 1 && agendamento.created_by) {
+            const user = await db.get(
+              'SELECT role FROM users WHERE email = ?',
+              [agendamento.created_by]
+            );
+            if (user && user.role === 'GESTOR_DE_CURSO') {
+              await createGestorNotification(
+                agendamento.created_by,
+                id,
+                `Seu agendamento "${agendamento.title}" foi marcado como prioritário!`,
+                'prioritized'
+              );
+            }
+          }
+
           res.json({ message: 'Prioridade atualizada com sucesso!' });
         } else {
           res.status(404).json({ message: 'Agendamento não encontrado.' });
@@ -447,29 +587,50 @@ async function startServer() {
         const { id } = req.params;
         const { internName, supervisorName } = req.body;
         const agendamento = await db.get(
-          'SELECT title, responsible_interns FROM agendamentos WHERE id = ?',
+          'SELECT title, responsible_interns, created_by FROM agendamentos WHERE id = ?',
           [id]
         );
         if (agendamento && internName) {
           let interns = JSON.parse(agendamento.responsible_interns);
           let message = '';
+          let gestorMessage = '';
+
           if (interns.includes(internName)) {
             interns = interns.filter((name) => name !== internName);
             if (supervisorName) {
               message = `O supervisor ${supervisorName} removeu você da tarefa "${agendamento.title}".`;
+              gestorMessage = `O estagiário ${internName} foi removido do agendamento "${agendamento.title}" pelo supervisor ${supervisorName}.`;
             }
           } else {
             interns.push(internName);
             if (supervisorName) {
               message = `O supervisor ${supervisorName} designou você para a tarefa "${agendamento.title}".`;
+              gestorMessage = `O estagiário ${internName} foi designado para seu agendamento "${agendamento.title}".`;
             }
           }
+
           if (message) {
             await db.run(
               'INSERT INTO notifications (intern_name, message) VALUES (?, ?)',
               [internName, message]
             );
           }
+
+          if (gestorMessage && agendamento.created_by && supervisorName) {
+            const creator = await db.get(
+              'SELECT role FROM users WHERE email = ?',
+              [agendamento.created_by]
+            );
+            if (creator && creator.role === 'GESTOR_DE_CURSO') {
+              await createGestorNotification(
+                agendamento.created_by,
+                id,
+                gestorMessage,
+                'intern_assigned'
+              );
+            }
+          }
+
           await db.run(
             'UPDATE agendamentos SET responsible_interns = ? WHERE id = ?',
             [JSON.stringify(interns), id]
@@ -493,6 +654,43 @@ async function startServer() {
       try {
         const db = await openDb();
         const { id } = req.params;
+        const { deleterEmail } = req.query;
+
+        const agendamento = await db.get(
+          'SELECT title, created_by, responsible_interns FROM agendamentos WHERE id = ?',
+          [id]
+        );
+
+        if (agendamento) {
+          const interns = JSON.parse(agendamento.responsible_interns || '[]');
+
+          for (const internName of interns) {
+            await db.run(
+              'INSERT INTO notifications (intern_name, message) VALUES (?, ?)',
+              [internName, `O agendamento "${agendamento.title}" foi excluído.`]
+            );
+          }
+
+          if (
+            agendamento.created_by &&
+            deleterEmail &&
+            agendamento.created_by !== deleterEmail
+          ) {
+            const creator = await db.get(
+              'SELECT role FROM users WHERE email = ?',
+              [agendamento.created_by]
+            );
+            if (creator && creator.role === 'GESTOR_DE_CURSO') {
+              await createGestorNotification(
+                agendamento.created_by,
+                id,
+                `Seu agendamento "${agendamento.title}" foi excluído.`,
+                'deleted'
+              );
+            }
+          }
+        }
+
         await db.run('DELETE FROM agendamentos WHERE id = ?', [id]);
         res.json({ message: 'Agendamento excluído com sucesso!' });
       } catch (error) {
@@ -520,6 +718,42 @@ async function startServer() {
       const { id } = req.params;
       await db.run('UPDATE notifications SET is_read = 1 WHERE id = ?', [id]);
       res.json({ message: 'Notificação marcada como lida.' });
+    });
+
+    app.get('/gestor-notifications', async (req, res) => {
+      try {
+        const db = await openDb();
+        const { gestorEmail } = req.query;
+        if (!gestorEmail) {
+          return res
+            .status(400)
+            .json({ message: 'Email do gestor é obrigatório.' });
+        }
+        await cleanOldGestorNotifications();
+        const notifications = await db.all(
+          'SELECT * FROM gestor_notifications WHERE gestor_email = ? AND is_read = 0 ORDER BY created_at DESC',
+          [gestorEmail]
+        );
+        res.json(notifications);
+      } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar notificações.' });
+      }
+    });
+
+    app.put('/gestor-notifications/:id/read', async (req, res) => {
+      try {
+        const db = await openDb();
+        const { id } = req.params;
+        await db.run(
+          'UPDATE gestor_notifications SET is_read = 1 WHERE id = ?',
+          [id]
+        );
+        res.json({ message: 'Notificação marcada como lida.' });
+      } catch (error) {
+        res
+          .status(500)
+          .json({ message: 'Erro ao marcar notificação como lida.' });
+      }
     });
 
     app.listen(port, () => {

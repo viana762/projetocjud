@@ -137,9 +137,26 @@ document.addEventListener('DOMContentLoaded', function () {
 
       agendamentos.forEach((ag) => {
         const equipments = JSON.parse(ag.equipments);
-        const equipmentsHTML = equipments
-          .map((eq) => `<span class="equip-item">${eq}</span>`)
-          .join('');
+        const checkedEquipments = JSON.parse(ag.equipments_checked || '[]');
+
+        let equipmentsHTML = '';
+        if (equipments.length > 0) {
+          const equipmentItemsHTML = equipments
+            .map((eq) => {
+              const safeEq = String(eq);
+              const isChecked = checkedEquipments.includes(safeEq);
+              return `<span class="equip-check-item ${
+                isChecked ? 'checked' : ''
+              }" data-equip="${safeEq}">
+                      <i class="fas ${
+                        isChecked ? 'fa-check-square' : 'fa-square'
+                      }"></i> ${safeEq}
+                    </span>`;
+            })
+            .join('');
+          equipmentsHTML = `<div class="equipment-checklist-container" data-id="${ag.id}">${equipmentItemsHTML}</div>`;
+        }
+
         const intervaloDatas = formatarIntervaloDatas(ag.startDate, ag.endDate);
 
         let notesHTML = '';
@@ -161,18 +178,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const cardHTML = `
           <div class="event-card assigned" data-id="${ag.id}">
-            <div class="event-time">
-              <span class="event-date-short">${intervaloDatas}</span>
-              <span>${ag.startTime}</span>
-              <span>${ag.endTime}</span>
+            <div class="event-header">
+              <div class="event-time">
+                <span class="event-date-short">${intervaloDatas}</span>
+                <span>${ag.startTime}</span>
+                <span>${ag.endTime}</span>
+              </div>
+              <div class="event-status-bar"></div>
+              <div class="event-details">
+                <span class="event-location">${ag.location}</span>
+                <span class="event-title">${ag.title}</span>
+              </div>
+              ${equipmentsHTML}
+              <div class="event-top-right-actions">
+                <div class="assign-container">
+                  <button class="candidate-btn active" data-id="${ag.id}">Remover-me</button>
+                </div>
+              </div>
             </div>
-            <div class="event-status-bar"></div>
-            <div class="event-details">
-              <span class="event-location">${ag.location}</span>
-              <span class="event-title">${ag.title}</span>
-            </div>
-            <div class="event-equipments">${equipmentsHTML}</div>
-            <div class="assign-container"><button class="candidate-btn active" data-id="${ag.id}">Remover-me</button></div>
             ${notesHTML}
           </div>`;
         tasksContainer.insertAdjacentHTML('beforeend', cardHTML);
@@ -194,9 +217,7 @@ document.addEventListener('DOMContentLoaded', function () {
           await fetch(`${RENDER_URL}/notifications/${notificationId}/read`, {
             method: 'PUT',
           });
-        } catch (error) {
-          // não faz nada se falhar, o usuário não precisa saber
-        }
+        } catch (error) {}
       }
 
       const reminderId = closeButton.dataset.reminderId;
@@ -215,7 +236,54 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
+  async function toggleChecklistItem(item) {
+    if (!item) return;
+    const container = item.closest('.equipment-checklist-container');
+    if (!container || !container.dataset.id) return;
+
+    const agendamentoId = container.dataset.id;
+    const equipName = item.dataset.equip;
+    if (!agendamentoId || !equipName) return;
+
+    try {
+      const response = await fetch(
+        `${RENDER_URL}/agendamentos/${agendamentoId}`
+      );
+      if (!response.ok)
+        throw new Error('Agendamento não encontrado para checklist');
+      const ag = await response.json();
+      let checkedEquipments = JSON.parse(ag.equipments_checked || '[]');
+
+      if (checkedEquipments.includes(equipName)) {
+        checkedEquipments = checkedEquipments.filter((e) => e !== equipName);
+      } else {
+        checkedEquipments.push(equipName);
+      }
+
+      await fetch(
+        `${RENDER_URL}/agendamentos/${agendamentoId}/check-equipamentos`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ equipmentsChecked: checkedEquipments }),
+        }
+      );
+
+      item.classList.toggle('checked');
+      const icon = item.querySelector('i');
+      if (icon)
+        icon.className = `fas ${
+          item.classList.contains('checked') ? 'fa-check-square' : 'fa-square'
+        }`;
+    } catch (error) {
+      console.error('Erro ao alternar checklist:', error);
+    }
+  }
+
   async function handleBodyClick(event) {
+    const checkItem = event.target.closest('.equip-check-item');
+    if (checkItem) return await toggleChecklistItem(checkItem);
+
     const candidateButton = event.target.closest('.candidate-btn');
     if (candidateButton) {
       const id = candidateButton.dataset.id;
@@ -226,9 +294,7 @@ document.addEventListener('DOMContentLoaded', function () {
           body: JSON.stringify({ internName: currentUserName }),
         });
         await carregarMinhasTarefas();
-      } catch (error) {
-        // não faz nada
-      }
+      } catch (error) {}
     }
 
     const descriptionToggle = event.target.closest('.description-btn');

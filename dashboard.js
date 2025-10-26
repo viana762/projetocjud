@@ -58,13 +58,16 @@ document.addEventListener('DOMContentLoaded', function () {
   const currentUser = JSON.parse(currentUserJSON);
   const userRole = currentUser.role;
   const currentUserName = currentUser.name;
+  const currentUserEmail = currentUser.email;
 
   const dashboardContainer = document.querySelector('.events-container');
   const prioritizedList = document.getElementById('prioritized-events-list');
   const miniCalendar = document.querySelector('.mini-calendar');
   const assignModal = document.getElementById('assign-modal');
+  const rightPanel = document.querySelector('.right-panel');
+  const rightPanelTitle = document.getElementById('right-panel-title');
 
-  if (!dashboardContainer || !prioritizedList || !assignModal) {
+  if (!dashboardContainer || !assignModal) {
     console.error(
       'Erro crítico: Um ou mais elementos essenciais do Dashboard não foram encontrados.'
     );
@@ -87,6 +90,7 @@ document.addEventListener('DOMContentLoaded', function () {
       return dataISO;
     }
   }
+
   function formatarIntervaloDatas(startDate, endDate) {
     if (!startDate || !endDate) return '';
     try {
@@ -116,23 +120,61 @@ document.addEventListener('DOMContentLoaded', function () {
         dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1);
     }
   }
-
   function setupSidebar() {
     const profileNameEl = document.querySelector('.profile-name');
     const profileRoleEl = document.querySelector('.profile-role');
     if (profileNameEl) profileNameEl.textContent = currentUserName;
-    if (profileRoleEl) profileRoleEl.textContent = userRole;
+    if (profileRoleEl) {
+      const roleMap = {
+        SUPERVISOR: 'Supervisor',
+        ESTAGIARIO: 'Estagiário',
+        GESTOR_DE_CURSO: 'Gestor de Curso',
+      };
+      profileRoleEl.textContent = roleMap[userRole] || userRole;
+    }
 
-    if (userRole === 'SUPERVISOR') {
-      const minhasTarefasLink = document.querySelector(
-        'a[href="minhas-tarefas.html"]'
-      );
-      if (minhasTarefasLink && minhasTarefasLink.parentElement) {
-        minhasTarefasLink.parentElement.style.display = 'none';
+    const allNavItems = document.querySelectorAll('.nav-list li');
+    allNavItems.forEach((item) => {
+      const link = item.querySelector('a');
+      if (!link) return;
+
+      const href = link.getAttribute('href');
+
+      if (userRole === 'GESTOR_DE_CURSO') {
+        if (
+          href === 'minhas-tarefas.html' ||
+          href === 'equipe.html' ||
+          href === 'configuracoes.html'
+        ) {
+          item.style.display = 'none';
+        }
       }
-      const equipeLink = document.querySelector('a[href="equipe.html"]');
-      if (equipeLink) {
-        equipeLink.innerHTML = '<i class="fas fa-users"></i> Minha Equipe';
+
+      if (userRole === 'SUPERVISOR') {
+        if (href === 'minhas-tarefas.html') {
+          item.style.display = 'none';
+        }
+        const equipeLink = document.querySelector('a[href="equipe.html"]');
+        if (equipeLink) {
+          equipeLink.innerHTML = '<i class="fas fa-users"></i> Minha Equipe';
+        }
+      }
+    });
+
+    if (userRole === 'GESTOR_DE_CURSO') {
+      if (rightPanel) {
+        rightPanel.style.display = 'block';
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) mainContent.style.width = 'auto';
+      }
+
+      const upcomingEventsDiv = document.querySelector('.upcoming-events');
+      if (upcomingEventsDiv) {
+        const titleElement = upcomingEventsDiv.querySelector('h3');
+        if (titleElement) {
+          titleElement.innerHTML =
+            '<i class="fas fa-bell" style="color: #5a32b3"></i> NOTIFICAÇÕES';
+        }
       }
     }
 
@@ -143,6 +185,70 @@ document.addEventListener('DOMContentLoaded', function () {
         localStorage.removeItem('currentUser');
         window.location.href = 'login.html';
       });
+    }
+  }
+
+  async function carregarNotificacoesGestor() {
+    if (userRole !== 'GESTOR_DE_CURSO' || !prioritizedList) return;
+
+    try {
+      const response = await fetch(
+        `${RENDER_URL}/gestor-notifications?gestorEmail=${encodeURIComponent(
+          currentUserEmail
+        )}`
+      );
+      if (!response.ok) {
+        console.error('Erro ao buscar notificações:', response.status);
+        prioritizedList.innerHTML =
+          '<p style="font-size: 13px; color: #888;">Erro ao carregar notificações.</p>';
+        return;
+      }
+
+      const notifications = await response.json();
+
+      prioritizedList.innerHTML = '';
+
+      if (notifications.length === 0) {
+        prioritizedList.innerHTML =
+          '<p style="font-size: 13px; color: #888;">Nenhuma notificação no momento.</p>';
+      } else {
+        notifications.forEach((notif) => {
+          const iconMap = {
+            created: 'fa-check-circle',
+            intern_assigned: 'fa-user-plus',
+            equipment_check: 'fa-check-square',
+            edited: 'fa-edit',
+            prioritized: 'fa-star',
+            deleted: 'fa-trash-alt',
+          };
+          const icon = iconMap[notif.type] || 'fa-bell';
+
+          const notifHTML = `
+            <div class="gestor-notification-item" data-id="${notif.id}">
+              <button class="notification-close-btn" data-notif-id="${notif.id}">&times;</button>
+              <i class="fas ${icon}"></i>
+              <span>${notif.message}</span>
+            </div>
+          `;
+          prioritizedList.insertAdjacentHTML('beforeend', notifHTML);
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar notificações do gestor:', error);
+      if (prioritizedList) {
+        prioritizedList.innerHTML =
+          '<p style="font-size: 13px; color: red;">Erro ao conectar com o servidor.</p>';
+      }
+    }
+  }
+
+  async function marcarNotificacaoComoLida(notifId) {
+    try {
+      await fetch(`${RENDER_URL}/gestor-notifications/${notifId}/read`, {
+        method: 'PUT',
+      });
+    } catch (error) {
+      console.error('Erro ao marcar notificação como lida:', error);
     }
   }
 
@@ -196,7 +302,9 @@ document.addEventListener('DOMContentLoaded', function () {
       dashboardContainer.querySelector('.no-events-message');
     if (oldNoEventsMessage) oldNoEventsMessage.remove();
 
-    prioritizedList.innerHTML = '';
+    if (userRole === 'SUPERVISOR' && prioritizedList) {
+      prioritizedList.innerHTML = '';
+    }
     let prioritizedCount = 0;
 
     if (!agendamentos || agendamentos.length === 0) {
@@ -228,7 +336,12 @@ document.addEventListener('DOMContentLoaded', function () {
           try {
             const cardHTML = criarCardHTML(ag);
             dashboardContainer.insertAdjacentHTML('beforeend', cardHTML);
-            if (ag.is_prioritized && view !== 'past') {
+            if (
+              ag.is_prioritized &&
+              view !== 'past' &&
+              userRole === 'SUPERVISOR' &&
+              prioritizedList
+            ) {
               prioritizedCount++;
               const dataFormatada = formatarData(ag.startDate);
               prioritizedList.insertAdjacentHTML(
@@ -254,7 +367,12 @@ document.addEventListener('DOMContentLoaded', function () {
           const cardHTML = criarCardHTML(ag);
           dashboardContainer.insertAdjacentHTML('beforeend', cardHTML);
 
-          if (ag.is_prioritized && view !== 'past') {
+          if (
+            ag.is_prioritized &&
+            view !== 'past' &&
+            userRole === 'SUPERVISOR' &&
+            prioritizedList
+          ) {
             prioritizedCount++;
             const dataFormatada = formatarData(ag.startDate);
             const prioritizedItemHTML = `<div class="prioritized-item"><strong>${dataFormatada} - ${ag.startTime}h:</strong> ${ag.title} (${ag.location})</div>`;
@@ -276,7 +394,11 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
-    if (prioritizedCount === 0) {
+    if (
+      userRole === 'SUPERVISOR' &&
+      prioritizedCount === 0 &&
+      prioritizedList
+    ) {
       prioritizedList.innerHTML =
         '<p style="font-size: 13px; color: #888;">Nenhum evento priorizado.</p>';
     }
@@ -291,41 +413,35 @@ document.addEventListener('DOMContentLoaded', function () {
     const equipmentItemsHTML = equipments
       .map((eq) => {
         const safeEq = String(eq);
-        if (userRole === 'SUPERVISOR') {
-          const isChecked = checkedEquipments.includes(safeEq);
+        const isChecked = checkedEquipments.includes(safeEq);
+
+        if (userRole === 'ESTAGIARIO') {
           return `<span class="equip-check-item ${
             isChecked ? 'checked' : ''
-          }" data-equip="${safeEq}">
+          }" data-equip="${safeEq}" data-agendamento-id="${ag.id}">
                   <i class="fas ${
                     isChecked ? 'fa-check-square' : 'fa-square'
                   }"></i> ${safeEq}
                 </span>`;
         } else {
-          return `<span class="equip-item">${safeEq}</span>`;
+          return `<span class="equip-item ${
+            isChecked ? 'checked' : ''
+          }">${safeEq}</span>`;
         }
       })
       .join('');
 
     if (equipments.length > 0) {
-      equipmentsHTML = `<div class="${
-        userRole === 'SUPERVISOR'
+      const containerClass =
+        userRole === 'ESTAGIARIO'
           ? 'equipment-checklist-container'
-          : 'event-equipments'
-      }" data-id="${ag.id}">${equipmentItemsHTML}</div>`;
+          : 'event-equipments';
+      equipmentsHTML = `<div class="${containerClass}" data-id="${ag.id}">${equipmentItemsHTML}</div>`;
     }
 
     let topRightActionsHTML = '';
-    if (userRole === 'ESTAGIARIO') {
-      const isCandidato = interns.includes(currentUserName);
-      topRightActionsHTML = `
-          <div class="assign-container">
-            <button class="candidate-btn ${
-              isCandidato ? 'active' : ''
-            }" data-id="${ag.id}">
-              ${isCandidato ? 'Candidatado(a)' : 'Candidatar-se'}
-            </button>
-          </div>`;
-    } else if (userRole === 'SUPERVISOR') {
+
+    if (userRole === 'SUPERVISOR') {
       let internListHTML =
         interns.length > 0
           ? interns.map((name) => `<li>${String(name)}</li>`).join('')
@@ -355,6 +471,16 @@ document.addEventListener('DOMContentLoaded', function () {
           </div>`;
 
       topRightActionsHTML = assignBlock + supervisorButtons;
+    } else if (userRole === 'ESTAGIARIO') {
+      const isCandidato = interns.includes(currentUserName);
+      topRightActionsHTML = `
+          <div class="assign-container">
+            <button class="candidate-btn ${
+              isCandidato ? 'active' : ''
+            }" data-id="${ag.id}">
+              ${isCandidato ? 'Candidatado(a)' : 'Candidatar-se'}
+            </button>
+          </div>`;
     }
 
     let descriptionBlockHTML = '';
@@ -386,6 +512,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const title = ag.title || 'Título não definido';
     const startTime = ag.startTime || '--:--';
     const endTime = ag.endTime || '--:--';
+    const grupoEventoTag = ag.grupo_evento
+      ? `<span class="event-group-tag">${ag.grupo_evento}</span>`
+      : '';
 
     return `
       <div class="event-card" data-id="${ag.id}">
@@ -401,11 +530,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <div class="event-details">
             <span class="event-location">${location}</span>
             <span class="event-title">${title}</span>
-            ${
-              ag.grupo_evento
-                ? `<span class="event-group-tag">${ag.grupo_evento}</span>`
-                : ''
-            }
+            ${grupoEventoTag}
           </div>
           ${equipmentsHTML} 
           <div class="event-top-right-actions">
@@ -415,12 +540,29 @@ document.addEventListener('DOMContentLoaded', function () {
         ${descriptionBlockHTML} 
       </div>`;
   }
-
   async function handleBodyClick(event) {
     const targetElement = event.target;
 
+    const notificationCloseBtn = targetElement.closest(
+      '.notification-close-btn'
+    );
+    if (notificationCloseBtn) {
+      const notifId = notificationCloseBtn.dataset.notifId;
+      await marcarNotificacaoComoLida(notifId);
+      notificationCloseBtn.parentElement.remove();
+      const remainingNotifs = document.querySelectorAll(
+        '.gestor-notification-item'
+      );
+      if (remainingNotifs.length === 0 && prioritizedList) {
+        prioritizedList.innerHTML =
+          '<p style="font-size: 13px; color: #888;">Nenhuma notificação no momento.</p>';
+      }
+      return;
+    }
+
     const checkItem = targetElement.closest('.equip-check-item');
-    if (checkItem) return await toggleChecklistItem(checkItem);
+    if (checkItem && userRole === 'ESTAGIARIO')
+      return await toggleChecklistItem(checkItem);
 
     const priorityButton = targetElement.closest('.priority-btn');
     if (priorityButton) return await togglePriority(priorityButton.dataset.id);
@@ -456,10 +598,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   async function toggleChecklistItem(item) {
     if (!item) return;
-    const container = item.closest('.equipment-checklist-container');
-    if (!container || !container.dataset.id) return;
-
-    const agendamentoId = container.dataset.id;
+    const agendamentoId = item.dataset.agendamentoId;
     const equipName = item.dataset.equip;
     if (!agendamentoId || !equipName) return;
 
@@ -483,7 +622,11 @@ document.addEventListener('DOMContentLoaded', function () {
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ equipmentsChecked: checkedEquipments }),
+          body: JSON.stringify({
+            equipmentsChecked: checkedEquipments,
+            internName: currentUserName,
+            equipmentName: equipName,
+          }),
         }
       );
 
@@ -493,6 +636,8 @@ document.addEventListener('DOMContentLoaded', function () {
         icon.className = `fas ${
           item.classList.contains('checked') ? 'fa-check-square' : 'fa-square'
         }`;
+
+      carregarAgendamentos();
     } catch (error) {
       console.error('Erro ao alternar checklist:', error);
       customAlert('Não foi possível atualizar o status do equipamento.', false);
@@ -532,7 +677,12 @@ document.addEventListener('DOMContentLoaded', function () {
     );
     if (querExcluir) {
       try {
-        await fetch(`${RENDER_URL}/agendamentos/${id}`, { method: 'DELETE' });
+        await fetch(
+          `${RENDER_URL}/agendamentos/${id}?deleterEmail=${encodeURIComponent(
+            currentUserEmail
+          )}`,
+          { method: 'DELETE' }
+        );
         await carregarAgendamentos();
         customAlert('Agendamento excluído com sucesso!');
       } catch (error) {
@@ -654,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function () {
           .querySelectorAll('.event-card, .event-group-title')
           .forEach((el) => {
             if (el.classList.contains('event-group-title')) {
-              el.style.display = 'block'; // Keep group titles always visible or add logic
+              el.style.display = 'block';
               return;
             }
             if (el && el.textContent) {
@@ -771,9 +921,13 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
   }
-
   exibirDataAtual();
   setupSidebar();
   setupEventListeners();
   carregarAgendamentos();
+
+  if (userRole === 'GESTOR_DE_CURSO') {
+    carregarNotificacoesGestor();
+    setInterval(carregarNotificacoesGestor, 60000);
+  }
 });

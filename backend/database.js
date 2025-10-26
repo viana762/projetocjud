@@ -27,7 +27,8 @@ async function setup() {
               is_prioritized INTEGER DEFAULT 0,
               responsible_interns TEXT DEFAULT '[]',
               equipments_checked TEXT DEFAULT '[]',
-              grupo_evento TEXT NULL 
+              grupo_evento TEXT NULL,
+              created_by TEXT NULL
           )
       `);
 
@@ -40,6 +41,7 @@ async function setup() {
               role TEXT NOT NULL
           )
       `);
+
   await db.exec(`
           CREATE TABLE IF NOT EXISTS notifications (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,6 +49,18 @@ async function setup() {
               message TEXT NOT NULL,
               is_read INTEGER DEFAULT 0,
               timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+      `);
+
+  await db.exec(`
+          CREATE TABLE IF NOT EXISTS gestor_notifications (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              gestor_email TEXT NOT NULL,
+              agendamento_id INTEGER,
+              message TEXT NOT NULL,
+              type TEXT NOT NULL,
+              is_read INTEGER DEFAULT 0,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
           )
       `);
 

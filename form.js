@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function () {
     return;
   }
   const schedulerEmail = currentUser.email;
+  const schedulerRole = currentUser.role;
 
   const urlParams = new URLSearchParams(window.location.search);
   const agendamentoId = urlParams.get('id');
@@ -102,6 +103,7 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     });
   }
+
   const startDateInput = document.getElementById('start-date');
   const endDateInput = document.getElementById('end-date');
 
@@ -236,7 +238,9 @@ document.addEventListener('DOMContentLoaded', function () {
         document.querySelector('input[name="presenca"]:checked')?.value ||
         'inicio',
       notes: document.getElementById('event-notes')?.value || '',
-      ...(isEditMode ? {} : { schedulerEmail: schedulerEmail }),
+      ...(isEditMode
+        ? { editorEmail: schedulerEmail, editorRole: schedulerRole }
+        : { schedulerEmail: schedulerEmail }),
     };
 
     const method = isEditMode ? 'PUT' : 'POST';

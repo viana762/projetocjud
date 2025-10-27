@@ -442,6 +442,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const grupoEventoTag = ag.grupo_evento
       ? `<span class="event-group-tag">${ag.grupo_evento}</span>`
       : '';
+    const createdByName = ag.created_by
+      ? ag.created_by.split('@')[0]
+      : 'Desconhecido';
+    const createdByTag = ag.created_by
+      ? `<span class="event-created-by">Agendado por: ${createdByName}</span>`
+      : '';
 
     return `
       <div class="event-card" data-id="${ag.id}">
@@ -457,6 +463,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <div class="event-details">
             <span class="event-location">${location}</span>
             <span class="event-title">${title}</span>
+            ${createdByTag}
             ${grupoEventoTag}
           </div>
           ${equipmentsHTML} 

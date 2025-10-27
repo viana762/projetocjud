@@ -329,6 +329,15 @@ body {
   max-width: fit-content;
 }
 
+.event-created-by {
+  font-size: 11px;
+  font-weight: 500;
+  color: #888;
+  display: block;
+  margin-top: 4px;
+  font-style: italic;
+}
+
 .event-header .equipment-checklist-container,
 .event-header .event-equipments {
   flex-grow: 1;

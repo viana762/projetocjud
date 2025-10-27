@@ -13,6 +13,15 @@ document.addEventListener('DOMContentLoaded', function () {
     'Webcam para Transmissão',
   ];
 
+  const EQUIPMENT_LIMITS = {
+    Projetor: 1,
+    'Sistema de Som': 2,
+    'Microfone sem Fio': 2,
+    'Microfone com Fio': 2,
+    'Passador de Slides': 1,
+    'Webcam para Transmissão': 999,
+  };
+
   const equipmentQuantities = {};
   EQUIPMENT_LIST.forEach((equip) => {
     equipmentQuantities[equip] = 1;
@@ -177,6 +186,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const quantityControl = document.createElement('div');
       quantityControl.className = 'quantity-control';
+      quantityControl.id = `qty-control-${equipName}`;
 
       const minusBtn = document.createElement('button');
       minusBtn.type = 'button';
@@ -187,6 +197,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (equipmentQuantities[equipName] > 1) {
           equipmentQuantities[equipName]--;
           updateQuantityDisplay(equipName);
+          checkEquipmentAvailability();
           updateFormEquipments();
         }
       });
@@ -202,10 +213,13 @@ document.addEventListener('DOMContentLoaded', function () {
       plusBtn.textContent = '+';
       plusBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        equipmentQuantities[equipName]++;
-        updateQuantityDisplay(equipName);
-        checkEquipmentAvailability();
-        updateFormEquipments();
+        const maxAvailable = getMaxAvailableQuantity(equipName);
+        if (equipmentQuantities[equipName] < maxAvailable) {
+          equipmentQuantities[equipName]++;
+          updateQuantityDisplay(equipName);
+          checkEquipmentAvailability();
+          updateFormEquipments();
+        }
       });
 
       quantityControl.appendChild(minusBtn);
@@ -222,10 +236,22 @@ document.addEventListener('DOMContentLoaded', function () {
     checkEquipmentAvailability();
   }
 
+  function getMaxAvailableQuantity(equipName) {
+    const maxLimit = EQUIPMENT_LIMITS[equipName] || 1;
+    return maxLimit;
+  }
+
   function updateQuantityDisplay(equipName) {
     const display = document.getElementById(`qty-${equipName}`);
     if (display) {
       display.textContent = equipmentQuantities[equipName];
+    }
+  }
+
+  function toggleQuantityControl(equipName, show) {
+    const control = document.getElementById(`qty-control-${equipName}`);
+    if (control) {
+      control.style.display = show ? 'flex' : 'none';
     }
   }
 
@@ -258,6 +284,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const equipItem = document.getElementById(`equip-${equipName}`);
         const availSpan = document.getElementById(`avail-${equipName}`);
         const checkbox = equipItem?.querySelector('input[type="checkbox"]');
+        const maxLimit = EQUIPMENT_LIMITS[equipName] || 1;
 
         if (!disponibilidade[equipName]) {
           if (availSpan) {
@@ -296,6 +323,10 @@ document.addEventListener('DOMContentLoaded', function () {
           if (checkbox) {
             checkbox.disabled = !podeReservar;
           }
+        }
+
+        if (maxLimit === 1) {
+          toggleQuantityControl(equipName, false);
         }
 
         if (reservados.length > 0 && availSpan) {

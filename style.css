@@ -990,8 +990,6 @@ body {
   box-shadow: 0 2px 5px rgba(90, 50, 179, 0.4);
 }
 
-/* ESTILOS PARA EQUIPAMENTOS */
-
 .equipment-item {
   display: flex;
   align-items: center;
@@ -1098,12 +1096,12 @@ body {
 
 .conflict-tooltip {
   font-size: 11px;
-  color: #d32f2f;
+  color: #5a32b3;
   margin-top: 6px;
   padding: 6px 8px;
-  background-color: #ffebee;
+  background-color: #f0eefc;
   border-radius: 3px;
-  border-left: 3px solid #d32f2f;
+  border-left: 3px solid #5a32b3;
   line-height: 1.4;
   word-break: break-word;
 }

@@ -327,6 +327,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (maxLimit === 1) {
           toggleQuantityControl(equipName, false);
+        } else {
+          toggleQuantityControl(equipName, true);
         }
 
         if (reservados.length > 0 && availSpan) {

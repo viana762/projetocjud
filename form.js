@@ -4,6 +4,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const RENDER_URL = 'https://projeto-cjud-backend.onrender.com';
 
+  const EQUIPMENT_LIST = [
+    'Projetor',
+    'Sistema de Som',
+    'Microfone sem Fio',
+    'Microfone com Fio',
+    'Passador de Slides',
+    'Webcam para Transmissão',
+  ];
+
+  const equipmentQuantities = {};
+  EQUIPMENT_LIST.forEach((equip) => {
+    equipmentQuantities[equip] = 1;
+  });
+
   function customAlert(message, isSuccess = true) {
     document
       .querySelectorAll('.custom-alert')
@@ -49,6 +63,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const startTimeSelect = document.getElementById('start-time');
   const endTimeSelect = document.getElementById('end-time');
+  const startDateInput = document.getElementById('start-date');
+  const endDateInput = document.getElementById('end-date');
 
   function populateTimeSelects(selectElement) {
     if (!selectElement) return;
@@ -104,9 +120,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  const startDateInput = document.getElementById('start-date');
-  const endDateInput = document.getElementById('end-date');
-
   function setDateRestrictions() {
     if (!startDateInput || !endDateInput) return;
     const hoje = new Date().toISOString().split('T')[0];
@@ -118,12 +131,217 @@ document.addEventListener('DOMContentLoaded', function () {
       if (endDateInput.value < startDateInput.value) {
         endDateInput.value = startDateInput.value;
       }
+      checkEquipmentAvailability();
     });
     if (startDateInput.value) {
       endDateInput.min = startDateInput.value;
     }
   }
   setDateRestrictions();
+
+  function renderEquipamentos() {
+    const container = document.getElementById('equipamentos-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    EQUIPMENT_LIST.forEach((equipName) => {
+      const equipItem = document.createElement('div');
+      equipItem.className = 'equipment-item';
+      equipItem.id = `equip-${equipName}`;
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.name = 'equip';
+      checkbox.value = equipName;
+      checkbox.className = 'equipment-checkbox';
+      checkbox.addEventListener('change', () => {
+        checkEquipmentAvailability();
+        updateFormEquipments();
+      });
+
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'equipment-info';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'equipment-name';
+      nameSpan.textContent = equipName;
+
+      const availSpan = document.createElement('span');
+      availSpan.className = 'equipment-availability';
+      availSpan.textContent = 'Selecione data e horário';
+      availSpan.id = `avail-${equipName}`;
+
+      infoDiv.appendChild(nameSpan);
+      infoDiv.appendChild(availSpan);
+
+      const quantityControl = document.createElement('div');
+      quantityControl.className = 'quantity-control';
+
+      const minusBtn = document.createElement('button');
+      minusBtn.type = 'button';
+      minusBtn.className = 'quantity-btn';
+      minusBtn.textContent = '−';
+      minusBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (equipmentQuantities[equipName] > 1) {
+          equipmentQuantities[equipName]--;
+          updateQuantityDisplay(equipName);
+          updateFormEquipments();
+        }
+      });
+
+      const quantityDisplay = document.createElement('span');
+      quantityDisplay.className = 'quantity-display';
+      quantityDisplay.textContent = '1';
+      quantityDisplay.id = `qty-${equipName}`;
+
+      const plusBtn = document.createElement('button');
+      plusBtn.type = 'button';
+      plusBtn.className = 'quantity-btn';
+      plusBtn.textContent = '+';
+      plusBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        equipmentQuantities[equipName]++;
+        updateQuantityDisplay(equipName);
+        checkEquipmentAvailability();
+        updateFormEquipments();
+      });
+
+      quantityControl.appendChild(minusBtn);
+      quantityControl.appendChild(quantityDisplay);
+      quantityControl.appendChild(plusBtn);
+
+      equipItem.appendChild(checkbox);
+      equipItem.appendChild(infoDiv);
+      equipItem.appendChild(quantityControl);
+
+      container.appendChild(equipItem);
+    });
+
+    checkEquipmentAvailability();
+  }
+
+  function updateQuantityDisplay(equipName) {
+    const display = document.getElementById(`qty-${equipName}`);
+    if (display) {
+      display.textContent = equipmentQuantities[equipName];
+    }
+  }
+
+  async function checkEquipmentAvailability() {
+    const data = startDateInput?.value;
+    const horaInicio = startTimeSelect?.value;
+    const horaFim = endTimeSelect?.value;
+
+    if (!data || !horaInicio || !horaFim) {
+      EQUIPMENT_LIST.forEach((equipName) => {
+        const availSpan = document.getElementById(`avail-${equipName}`);
+        if (availSpan) {
+          availSpan.textContent = 'Selecione data e horário';
+          availSpan.className = 'equipment-availability';
+        }
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${RENDER_URL}/equipamentos-disponiveis?data=${data}&horaInicio=${horaInicio}&horaFim=${horaFim}`
+      );
+
+      if (!response.ok) throw new Error('Erro ao buscar disponibilidade');
+
+      const disponibilidade = await response.json();
+
+      EQUIPMENT_LIST.forEach((equipName) => {
+        const equipItem = document.getElementById(`equip-${equipName}`);
+        const availSpan = document.getElementById(`avail-${equipName}`);
+        const checkbox = equipItem?.querySelector('input[type="checkbox"]');
+
+        if (!disponibilidade[equipName]) {
+          if (availSpan) {
+            availSpan.textContent = 'Equipamento não encontrado';
+            availSpan.className = 'equipment-availability';
+          }
+          return;
+        }
+
+        const { total, disponivel, reservados } = disponibilidade[equipName];
+        const quantidadeSolicitada = equipmentQuantities[equipName] || 1;
+        const podeReservar = disponivel >= quantidadeSolicitada;
+
+        if (availSpan) {
+          availSpan.textContent = `${disponivel}/${total} disponível(is)`;
+          availSpan.className = 'equipment-availability';
+
+          if (!podeReservar) {
+            availSpan.classList.add('warning');
+            availSpan.textContent = `${disponivel}/${total} disponível(is) - Insuficiente!`;
+          }
+        }
+
+        if (equipItem) {
+          if (podeReservar) {
+            equipItem.classList.remove('unavailable');
+          } else {
+            equipItem.classList.add('unavailable');
+          }
+
+          if (checkbox && !podeReservar && checkbox.checked) {
+            checkbox.checked = false;
+            updateFormEquipments();
+          }
+
+          if (checkbox) {
+            checkbox.disabled = !podeReservar;
+          }
+        }
+
+        if (reservados.length > 0 && availSpan) {
+          let existingTooltip =
+            availSpan.parentElement?.querySelector('.conflict-tooltip');
+          if (existingTooltip) existingTooltip.remove();
+
+          const tooltip = document.createElement('div');
+          tooltip.className = 'conflict-tooltip';
+          const conflitosText = reservados
+            .map((r) => `${r.agendamento} (${r.horario})`)
+            .join(', ');
+          tooltip.innerHTML = `⚠️ Já reservado: ${conflitosText}`;
+          availSpan.parentElement?.appendChild(tooltip);
+        } else {
+          let existingTooltip =
+            availSpan?.parentElement?.querySelector('.conflict-tooltip');
+          if (existingTooltip) existingTooltip.remove();
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao verificar disponibilidade:', error);
+      EQUIPMENT_LIST.forEach((equipName) => {
+        const availSpan = document.getElementById(`avail-${equipName}`);
+        if (availSpan) {
+          availSpan.textContent = 'Erro ao carregar';
+          availSpan.className = 'equipment-availability';
+        }
+      });
+    }
+  }
+
+  function updateFormEquipments() {
+    const equipmentForm = EQUIPMENT_LIST.filter((equipName) => {
+      const checkbox = document.querySelector(
+        `input[name="equip"][value="${equipName}"]`
+      );
+      return checkbox && checkbox.checked;
+    }).map((equipName) => ({
+      name: equipName,
+      quantity: equipmentQuantities[equipName] || 1,
+    }));
+  }
+
+  startTimeSelect?.addEventListener('change', checkEquipmentAvailability);
+  endTimeSelect?.addEventListener('change', checkEquipmentAvailability);
 
   async function preencherFormulario() {
     const idParaBuscar = isEditMode ? agendamentoId : duplicateId;
@@ -176,10 +394,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const equipments = JSON.parse(ag.equipments || '[]');
       equipments.forEach((equip) => {
+        const equipName = typeof equip === 'string' ? equip : equip.name;
+        const quantity = typeof equip === 'object' ? equip.quantity : 1;
+
         const checkbox = document.querySelector(
-          `input[name="equip"][value="${equip}"]`
+          `input[name="equip"][value="${equipName}"]`
         );
-        if (checkbox) checkbox.checked = true;
+        if (checkbox) {
+          checkbox.checked = true;
+          equipmentQuantities[equipName] = quantity;
+          updateQuantityDisplay(equipName);
+        }
       });
 
       const radio = document.querySelector(
@@ -188,11 +413,14 @@ document.addEventListener('DOMContentLoaded', function () {
       if (radio) radio.checked = true;
 
       setDateRestrictions();
+      checkEquipmentAvailability();
     } catch (error) {
       console.error('Erro ao buscar dados para preencher:', error);
       customAlert('Não foi possível carregar os dados do agendamento.', false);
     }
   }
+
+  renderEquipamentos();
 
   if (isEditMode || isDuplicateMode) {
     preencherFormulario();
@@ -223,6 +451,16 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
+    const equipmentsForm = EQUIPMENT_LIST.filter((equipName) => {
+      const checkbox = document.querySelector(
+        `input[name="equip"][value="${equipName}"]`
+      );
+      return checkbox && checkbox.checked;
+    }).map((equipName) => ({
+      name: equipName,
+      quantity: equipmentQuantities[equipName] || 1,
+    }));
+
     const formData = {
       title: document.getElementById('event-title')?.value || '',
       startDate: startDateInput?.value || '',
@@ -231,9 +469,7 @@ document.addEventListener('DOMContentLoaded', function () {
       endTime: endTimeValue,
       location: locationSelect?.value || '',
       grupo_evento: document.getElementById('grupo-evento')?.value || null,
-      equipments: Array.from(
-        document.querySelectorAll('input[name="equip"]:checked')
-      ).map((cb) => cb.value),
+      equipments: equipmentsForm,
       presence:
         document.querySelector('input[name="presenca"]:checked')?.value ||
         'inicio',

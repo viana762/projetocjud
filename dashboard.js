@@ -65,21 +65,13 @@ document.addEventListener('DOMContentLoaded', function () {
   const miniCalendar = document.querySelector('.mini-calendar');
   const assignModal = document.getElementById('assign-modal');
   const rightPanel = document.querySelector('.right-panel');
-  const rightPanelTitle = document.getElementById('right-panel-title');
 
   if (!dashboardContainer || !assignModal) {
-    console.error(
-      'Erro crítico: Um ou mais elementos essenciais do Dashboard não foram encontrados.'
-    );
+    console.error('Erro crítico: Elementos essenciais não encontrados.');
     return;
   }
 
   const modalInternList = document.getElementById('modal-intern-list');
-  if (!modalInternList) {
-    console.error(
-      "Erro Crítico: O elemento da lista de estagiários no modal (id='modal-intern-list') não foi encontrado."
-    );
-  }
 
   function formatarData(dataISO) {
     if (!dataISO) return '';
@@ -120,6 +112,7 @@ document.addEventListener('DOMContentLoaded', function () {
         dataFormatada.charAt(0).toUpperCase() + dataFormatada.slice(1);
     }
   }
+
   function setupSidebar() {
     const profileNameEl = document.querySelector('.profile-name');
     const profileRoleEl = document.querySelector('.profile-role');
@@ -164,10 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (userRole === 'GESTOR_DE_CURSO') {
       if (rightPanel) {
         rightPanel.style.display = 'block';
-        const mainContent = document.querySelector('.main-content');
-        if (mainContent) mainContent.style.width = 'auto';
       }
-
       const upcomingEventsDiv = document.querySelector('.upcoming-events');
       if (upcomingEventsDiv) {
         const titleElement = upcomingEventsDiv.querySelector('h3');
@@ -205,7 +195,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
 
       const notifications = await response.json();
-
       prioritizedList.innerHTML = '';
 
       if (notifications.length === 0) {
@@ -234,11 +223,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       }
     } catch (error) {
-      console.error('Erro ao carregar notificações do gestor:', error);
-      if (prioritizedList) {
-        prioritizedList.innerHTML =
-          '<p style="font-size: 13px; color: red;">Erro ao conectar com o servidor.</p>';
-      }
+      console.error('Erro ao carregar notificações:', error);
     }
   }
 
@@ -248,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
         method: 'PUT',
       });
     } catch (error) {
-      console.error('Erro ao marcar notificação como lida:', error);
+      console.error('Erro ao marcar notificação:', error);
     }
   }
 
@@ -266,20 +251,14 @@ document.addEventListener('DOMContentLoaded', function () {
       if (queryString) url += `?${queryString}`;
 
       const response = await fetch(url);
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Server response error:', response.status, errorData);
-        throw new Error(
-          `Falha ao buscar dados do servidor (${response.status})`
-        );
-      }
+      if (!response.ok) throw new Error('Falha ao buscar dados');
 
       const agendamentos = await response.json();
       renderizarDashboard(agendamentos, dataSelecionada, view);
     } catch (error) {
-      console.error('Erro detalhado ao carregar agendamentos:', error);
+      console.error('Erro ao carregar agendamentos:', error);
       dashboardContainer.innerHTML =
-        '<h2 class="main-title">AGENDAMENTOS</h2><p style="color: red;">Não foi possível carregar os agendamentos. Verifique o console (F12) para mais detalhes.</p>';
+        '<h2 class="main-title">AGENDAMENTOS</h2><p style="color: red;">Erro ao carregar agendamentos.</p>';
     }
   }
 
@@ -298,14 +277,10 @@ document.addEventListener('DOMContentLoaded', function () {
     document
       .querySelectorAll('.event-card, .event-group-title')
       .forEach((el) => el.remove());
-    const oldNoEventsMessage =
-      dashboardContainer.querySelector('.no-events-message');
-    if (oldNoEventsMessage) oldNoEventsMessage.remove();
 
     if (userRole === 'SUPERVISOR' && prioritizedList) {
       prioritizedList.innerHTML = '';
     }
-    let prioritizedCount = 0;
 
     if (!agendamentos || agendamentos.length === 0) {
       dashboardContainer.insertAdjacentHTML(
@@ -330,77 +305,24 @@ document.addEventListener('DOMContentLoaded', function () {
       for (const groupName in groupedEvents) {
         dashboardContainer.insertAdjacentHTML(
           'beforeend',
-          `<h3 class="event-group-title">${groupName}</h3>`
+          `<h3 class="event-group-title"><span class="group-icon">📚</span>${groupName}</h3>`
         );
         groupedEvents[groupName].forEach((ag) => {
-          try {
-            const cardHTML = criarCardHTML(ag);
-            dashboardContainer.insertAdjacentHTML('beforeend', cardHTML);
-            if (
-              ag.is_prioritized &&
-              view !== 'past' &&
-              userRole === 'SUPERVISOR' &&
-              prioritizedList
-            ) {
-              prioritizedCount++;
-              const dataFormatada = formatarData(ag.startDate);
-              prioritizedList.insertAdjacentHTML(
-                'beforeend',
-                `<div class="prioritized-item"><strong>${dataFormatada} - ${ag.startTime}h:</strong> ${ag.title} (${ag.location})</div>`
-              );
-            }
-          } catch (cardError) {
-            console.error(
-              `Erro ao criar card para agendamento ID ${ag.id}:`,
-              cardError
-            );
-            dashboardContainer.insertAdjacentHTML(
-              'beforeend',
-              `<div class="event-card error-card">Erro ao carregar este agendamento (ID: ${ag.id}).</div>`
-            );
-          }
+          const cardHTML = criarCardHTML(ag);
+          dashboardContainer.insertAdjacentHTML('beforeend', cardHTML);
         });
       }
 
-      ungroupedEvents.forEach((ag) => {
-        try {
+      if (ungroupedEvents.length > 0) {
+        dashboardContainer.insertAdjacentHTML(
+          'beforeend',
+          '<h3 class="event-group-title ungrouped-title"><span class="group-icon">📂</span>OUTROS AGENDAMENTOS</h3>'
+        );
+        ungroupedEvents.forEach((ag) => {
           const cardHTML = criarCardHTML(ag);
           dashboardContainer.insertAdjacentHTML('beforeend', cardHTML);
-
-          if (
-            ag.is_prioritized &&
-            view !== 'past' &&
-            userRole === 'SUPERVISOR' &&
-            prioritizedList
-          ) {
-            prioritizedCount++;
-            const dataFormatada = formatarData(ag.startDate);
-            const prioritizedItemHTML = `<div class="prioritized-item"><strong>${dataFormatada} - ${ag.startTime}h:</strong> ${ag.title} (${ag.location})</div>`;
-            prioritizedList.insertAdjacentHTML(
-              'beforeend',
-              prioritizedItemHTML
-            );
-          }
-        } catch (cardError) {
-          console.error(
-            `Erro ao criar card para agendamento ID ${ag.id}:`,
-            cardError
-          );
-          dashboardContainer.insertAdjacentHTML(
-            'beforeend',
-            `<div class="event-card error-card">Erro ao carregar este agendamento (ID: ${ag.id}).</div>`
-          );
-        }
-      });
-    }
-
-    if (
-      userRole === 'SUPERVISOR' &&
-      prioritizedCount === 0 &&
-      prioritizedList
-    ) {
-      prioritizedList.innerHTML =
-        '<p style="font-size: 13px; color: #888;">Nenhum evento priorizado.</p>';
+        });
+      }
     }
   }
 
@@ -412,7 +334,12 @@ document.addEventListener('DOMContentLoaded', function () {
     let equipmentsHTML = '';
     const equipmentItemsHTML = equipments
       .map((eq) => {
-        const safeEq = String(eq);
+        const equipName = typeof eq === 'string' ? eq : eq.name;
+        const quantidade =
+          typeof eq === 'object' && eq.quantity ? eq.quantity : 1;
+        const exibicao =
+          quantidade > 1 ? `${equipName} (${quantidade}x)` : equipName;
+        const safeEq = String(equipName);
         const isChecked = checkedEquipments.includes(safeEq);
 
         if (userRole === 'ESTAGIARIO') {
@@ -421,12 +348,12 @@ document.addEventListener('DOMContentLoaded', function () {
           }" data-equip="${safeEq}" data-agendamento-id="${ag.id}">
                   <i class="fas ${
                     isChecked ? 'fa-check-square' : 'fa-square'
-                  }"></i> ${safeEq}
+                  }"></i> ${exibicao}
                 </span>`;
         } else {
           return `<span class="equip-item ${
             isChecked ? 'checked' : ''
-          }">${safeEq}</span>`;
+          }">${exibicao}</span>`;
         }
       })
       .join('');
@@ -540,6 +467,7 @@ document.addEventListener('DOMContentLoaded', function () {
         ${descriptionBlockHTML} 
       </div>`;
   }
+
   async function handleBodyClick(event) {
     const targetElement = event.target;
 
@@ -550,13 +478,6 @@ document.addEventListener('DOMContentLoaded', function () {
       const notifId = notificationCloseBtn.dataset.notifId;
       await marcarNotificacaoComoLida(notifId);
       notificationCloseBtn.parentElement.remove();
-      const remainingNotifs = document.querySelectorAll(
-        '.gestor-notification-item'
-      );
-      if (remainingNotifs.length === 0 && prioritizedList) {
-        prioritizedList.innerHTML =
-          '<p style="font-size: 13px; color: #888;">Nenhuma notificação no momento.</p>';
-      }
       return;
     }
 
@@ -606,8 +527,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const response = await fetch(
         `${RENDER_URL}/agendamentos/${agendamentoId}`
       );
-      if (!response.ok)
-        throw new Error('Agendamento não encontrado para checklist');
+      if (!response.ok) throw new Error('Agendamento não encontrado');
       const ag = await response.json();
       let checkedEquipments = JSON.parse(ag.equipments_checked || '[]');
 
@@ -640,7 +560,7 @@ document.addEventListener('DOMContentLoaded', function () {
       carregarAgendamentos();
     } catch (error) {
       console.error('Erro ao alternar checklist:', error);
-      customAlert('Não foi possível atualizar o status do equipamento.', false);
+      customAlert('Erro ao atualizar equipamento.', false);
     }
   }
 
@@ -672,9 +592,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   async function deleteAgendamento(id) {
     if (!id) return;
-    const querExcluir = await customConfirm(
-      'Tem certeza que deseja excluir este agendamento?'
-    );
+    const querExcluir = await customConfirm('Deseja excluir este agendamento?');
     if (querExcluir) {
       try {
         await fetch(
@@ -686,8 +604,8 @@ document.addEventListener('DOMContentLoaded', function () {
         await carregarAgendamentos();
         customAlert('Agendamento excluído com sucesso!');
       } catch (error) {
-        console.error('Erro ao excluir agendamento:', error);
-        customAlert('Não foi possível excluir o agendamento.', false);
+        console.error('Erro ao excluir:', error);
+        customAlert('Erro ao excluir agendamento.', false);
       }
     }
   }
@@ -703,7 +621,7 @@ document.addEventListener('DOMContentLoaded', function () {
       ]);
 
       if (!internsResponse.ok || !agendamentoResponse.ok) {
-        throw new Error('Falha ao buscar dados para o modal');
+        throw new Error('Falha ao buscar dados');
       }
 
       const allInternsResult = await internsResponse.json();
@@ -718,8 +636,8 @@ document.addEventListener('DOMContentLoaded', function () {
       renderizarListaModal(responsibleInterns, internNames);
       assignModal.style.display = 'flex';
     } catch (error) {
-      console.error('Erro ao abrir modal de designação:', error);
-      customAlert('Não foi possível carregar a lista de estagiários.', false);
+      console.error('Erro ao abrir modal:', error);
+      customAlert('Erro ao carregar estagiários.', false);
     }
   }
 
@@ -756,8 +674,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const updatedResponse = await fetch(
         `${RENDER_URL}/agendamentos/${agendamentoId}`
       );
-      if (!updatedResponse.ok)
-        throw new Error('Falha ao buscar agendamento atualizado');
+      if (!updatedResponse.ok) throw new Error('Falha ao buscar atualização');
       const updatedAgendamento = await updatedResponse.json();
       const updatedInterns = JSON.parse(
         updatedAgendamento.responsible_interns || '[]'
@@ -768,10 +685,9 @@ document.addEventListener('DOMContentLoaded', function () {
       );
 
       renderizarListaModal(updatedInterns, allInternsInModal);
-
       carregarAgendamentos();
     } catch (error) {
-      console.error('Erro ao designar/remover estagiário:', error);
+      console.error('Erro ao designar:', error);
       customAlert('Erro ao atualizar responsáveis.', false);
     }
   }
@@ -800,21 +716,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (searchBar) {
       searchBar.addEventListener('input', () => {
         const searchTerm = searchBar.value.toLowerCase();
-        document
-          .querySelectorAll('.event-card, .event-group-title')
-          .forEach((el) => {
-            if (el.classList.contains('event-group-title')) {
-              el.style.display = 'block';
-              return;
-            }
-            if (el && el.textContent) {
-              el.style.display = el.textContent
-                .toLowerCase()
-                .includes(searchTerm)
-                ? 'flex'
-                : 'none';
-            }
-          });
+        document.querySelectorAll('.event-card').forEach((el) => {
+          el.style.display = el.textContent.toLowerCase().includes(searchTerm)
+            ? 'flex'
+            : 'none';
+        });
       });
     }
 
@@ -891,6 +797,7 @@ document.addEventListener('DOMContentLoaded', function () {
           dataAtual.setMonth(dataAtual.getMonth() - 1);
           renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
         });
+
         nextMonthBtn.addEventListener('click', () => {
           dataAtual.setMonth(dataAtual.getMonth() + 1);
           renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
@@ -917,10 +824,12 @@ document.addEventListener('DOMContentLoaded', function () {
             }
           }
         });
+
         renderizarCalendario(dataAtual.getFullYear(), dataAtual.getMonth());
       }
     }
   }
+
   exibirDataAtual();
   setupSidebar();
   setupEventListeners();

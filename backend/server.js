@@ -16,6 +16,15 @@ const transporter = nodemailer.createTransport({
 
 const EMAIL_FIXO_DESTINO = 'vianagemini99@gmail.com';
 
+const EQUIPMENT_LIMITS = {
+  Projetor: 1,
+  'Sistema de Som': 2,
+  'Microfone sem Fio': 2,
+  'Microfone com Fio': 2,
+  'Passador de Slides': 1,
+  'Webcam para Transmissão': 999,
+};
+
 const usersToCreate = [
   {
     name: 'Maikon Pagani',
@@ -63,7 +72,6 @@ const usersToCreate = [
 
 async function seedUsersIfNeeded() {
   const db = await openDb();
-
   const firstUser = await db.get('SELECT id FROM users LIMIT 1');
 
   if (!firstUser) {
@@ -99,6 +107,10 @@ async function createGestorNotification(
     'INSERT INTO gestor_notifications (gestor_email, agendamento_id, message, type) VALUES (?, ?, ?, ?)',
     [gestorEmail, agendamentoId, message, type]
   );
+}
+
+function temSobreposicao(inicio1, fim1, inicio2, fim2) {
+  return inicio1 < fim2 && fim1 > inicio2;
 }
 
 async function startServer() {
@@ -177,11 +189,9 @@ async function startServer() {
           'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
           [name, email, hashedPassword, role]
         );
-        res
-          .status(201)
-          .json({
-            message: `Usuário ${name} criado com sucesso! A senha padrão é 'mudar123'.`,
-          });
+        res.status(201).json({
+          message: `Usuário ${name} criado com sucesso! A senha padrão é 'mudar123'.`,
+        });
       } catch (error) {
         if (error.code === 'SQLITE_CONSTRAINT') {
           return res
@@ -241,7 +251,6 @@ async function startServer() {
       try {
         const db = await openDb();
         const emailToDelete = req.params.email;
-
         const result = await db.run('DELETE FROM users WHERE email = ?', [
           emailToDelete,
         ]);
@@ -321,7 +330,11 @@ async function startServer() {
             html: `<h3>Agendamento Criado com Sucesso! (ID: ${novoId})</h3><p>O agendamento a seguir foi criado por ${schedulerEmail}:</p><ul><li><strong>Título:</strong> ${title}</li><li><strong>Grupo do Evento:</strong> ${
               grupo_evento || 'N/A'
             }</li><li><strong>Período:</strong> ${startDate} ${startTime} a ${endDate} ${endTime}</li><li><strong>Local:</strong> ${location}</li><li><strong>Equipamentos Solicitados:</strong> ${
-              equipments.join(', ') || 'Nenhum'
+              equipments
+                .map((e) =>
+                  typeof e === 'string' ? e : `${e.name} (${e.quantity}x)`
+                )
+                .join(', ') || 'Nenhum'
             }</li><li><strong>Observações:</strong> ${
               notes || 'Nenhuma'
             }</li></ul><p>Acesse o painel para mais detalhes.</p>`,
@@ -329,14 +342,14 @@ async function startServer() {
           await transporter.sendMail(mailOptions);
         } catch (emailError) {
           console.error(
-            'ERRO GRAVE AO ENVIAR E-MAIL (AGENDAMENTO ID:',
+            'ERRO AO ENVIAR E-MAIL (AGENDAMENTO ID:',
             novoId,
             '):',
             emailError
           );
         }
       } catch (dbError) {
-        console.error('ERRO AO SALVAR AGENDAMENTO NO BANCO DE DADOS:', dbError);
+        console.error('ERRO AO SALVAR AGENDAMENTO:', dbError);
         res
           .status(500)
           .json({ message: 'Erro interno ao salvar o agendamento.' });
@@ -387,6 +400,71 @@ async function startServer() {
       } catch (error) {
         console.error('ERRO AO ATUALIZAR CHECKLIST:', error);
         res.status(500).json({ message: 'Erro ao atualizar checklist.' });
+      }
+    });
+
+    app.get('/equipamentos-disponiveis', async (req, res) => {
+      try {
+        const db = await openDb();
+        const { data, horaInicio, horaFim } = req.query;
+
+        if (!data || !horaInicio || !horaFim) {
+          return res
+            .status(400)
+            .json({ message: 'Data, horaInicio e horaFim são obrigatórios.' });
+        }
+
+        const agendamentos = await db.all(
+          'SELECT * FROM agendamentos WHERE startDate <= ? AND endDate >= ?',
+          [data, data]
+        );
+
+        const disponibilidade = {};
+
+        for (const equipName in EQUIPMENT_LIMITS) {
+          disponibilidade[equipName] = {
+            total: EQUIPMENT_LIMITS[equipName],
+            disponivel: EQUIPMENT_LIMITS[equipName],
+            reservados: [],
+          };
+        }
+
+        agendamentos.forEach((ag) => {
+          const equipments = JSON.parse(ag.equipments || '[]');
+
+          const temConflito = temSobreposicao(
+            ag.startTime,
+            ag.endTime,
+            horaInicio,
+            horaFim
+          );
+
+          if (temConflito) {
+            equipments.forEach((equip) => {
+              const equipName = typeof equip === 'string' ? equip : equip.name;
+              const quantity =
+                typeof equip === 'object' && equip.quantity
+                  ? equip.quantity
+                  : 1;
+
+              if (disponibilidade[equipName]) {
+                disponibilidade[equipName].disponivel -= quantity;
+                disponibilidade[equipName].reservados.push({
+                  agendamento: ag.title,
+                  quantidade: quantity,
+                  horario: `${ag.startTime}-${ag.endTime}`,
+                });
+              }
+            });
+          }
+        });
+
+        res.json(disponibilidade);
+      } catch (error) {
+        console.error('Erro ao buscar disponibilidade:', error);
+        res
+          .status(500)
+          .json({ message: 'Erro ao buscar disponibilidade de equipamentos.' });
       }
     });
 
@@ -456,6 +534,7 @@ async function startServer() {
         res.status(500).json({ message: 'Erro ao buscar agendamento.' });
       }
     });
+
     app.put('/agendamentos/:id', async (req, res) => {
       try {
         const db = await openDb();

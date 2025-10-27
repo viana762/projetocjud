@@ -13,6 +13,15 @@ document.addEventListener('DOMContentLoaded', function () {
     'Webcam para Transmissão',
   ];
 
+  const EQUIPMENT_ICONS = {
+    Projetor: 'fa-video',
+    'Sistema de Som': 'fa-volume-up',
+    'Microfone sem Fio': 'fa-microphone',
+    'Microfone com Fio': 'fa-microphone',
+    'Passador de Slides': 'fa-hand-pointer',
+    'Webcam para Transmissão': 'fa-camera',
+  };
+
   const EQUIPMENT_LIMITS = {
     Projetor: 1,
     'Sistema de Som': 2,
@@ -156,8 +165,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     EQUIPMENT_LIST.forEach((equipName) => {
       const equipItem = document.createElement('div');
-      equipItem.className = 'equipment-item';
+      equipItem.className = 'equipment-card';
       equipItem.id = `equip-${equipName}`;
+
+      const iconClass = EQUIPMENT_ICONS[equipName] || 'fa-box';
 
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
@@ -168,6 +179,10 @@ document.addEventListener('DOMContentLoaded', function () {
         checkEquipmentAvailability();
         updateFormEquipments();
       });
+
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'equipment-icon';
+      iconSpan.innerHTML = `<i class="fas ${iconClass}"></i>`;
 
       const infoDiv = document.createElement('div');
       infoDiv.className = 'equipment-info';
@@ -226,8 +241,13 @@ document.addEventListener('DOMContentLoaded', function () {
       quantityControl.appendChild(quantityDisplay);
       quantityControl.appendChild(plusBtn);
 
-      equipItem.appendChild(checkbox);
-      equipItem.appendChild(infoDiv);
+      const topDiv = document.createElement('div');
+      topDiv.className = 'equipment-top';
+      topDiv.appendChild(checkbox);
+      topDiv.appendChild(iconSpan);
+      topDiv.appendChild(infoDiv);
+
+      equipItem.appendChild(topDiv);
       equipItem.appendChild(quantityControl);
 
       container.appendChild(equipItem);
@@ -302,8 +322,12 @@ document.addEventListener('DOMContentLoaded', function () {
           availSpan.textContent = `${disponivel}/${total} disponível(is)`;
           availSpan.className = 'equipment-availability';
 
-          if (!podeReservar) {
+          if (podeReservar) {
+            availSpan.classList.add('available');
+            availSpan.classList.remove('warning');
+          } else {
             availSpan.classList.add('warning');
+            availSpan.classList.remove('available');
             availSpan.textContent = `${disponivel}/${total} disponível(is) - Insuficiente!`;
           }
         }

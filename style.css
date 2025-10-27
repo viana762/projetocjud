@@ -1107,9 +1107,150 @@ body {
 }
 
 #equipamentos-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.equipment-card {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #fafafa;
+  transition: all 0.3s ease;
+}
+
+.equipment-card:hover {
+  border-color: #5a32b3;
+  background-color: #f5f5f5;
+  box-shadow: 0 4px 12px rgba(90, 50, 179, 0.1);
+}
+
+.equipment-card.unavailable {
+  background-color: #f3f3f3;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.equipment-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.equipment-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #5a32b3;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.equipment-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.equipment-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0eefc;
+  border-radius: 6px;
+  color: #5a32b3;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.equipment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.equipment-name {
+  font-weight: 700;
+  color: #333;
+  font-size: 15px;
+}
+
+.equipment-availability {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.equipment-availability.available {
+  color: #27ae60;
+}
+
+.equipment-availability.warning {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px;
+  align-self: flex-start;
+}
+
+.quantity-btn {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background-color 0.2s;
+  color: #333;
+  padding: 0;
+}
+
+.quantity-btn:hover:not(:disabled) {
+  background-color: #e0e0e0;
+}
+
+.quantity-btn:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  color: #ccc;
+}
+
+.quantity-display {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 600;
+  color: #333;
+  font-size: 13px;
+}
+
+.conflict-tooltip {
+  font-size: 11px;
+  color: #5a32b3;
+  margin-top: 8px;
+  padding: 6px 8px;
+  background-color: #f0eefc;
+  border-radius: 3px;
+  border-left: 3px solid #5a32b3;
+  line-height: 1.4;
+  word-break: break-word;
 }
 
 .modal-overlay {

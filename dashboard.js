@@ -442,11 +442,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const grupoEventoTag = ag.grupo_evento
       ? `<span class="event-group-tag">${ag.grupo_evento}</span>`
       : '';
-    const createdByName = ag.created_by
-      ? ag.created_by.split('@')[0]
-      : 'Desconhecido';
+
+    const createdByName =
+      ag.created_by_full_name ||
+      (ag.created_by ? ag.created_by.split('@')[0] : 'Desconhecido');
     const createdByTag = ag.created_by
-      ? `<span class="event-created-by">Agendado por: ${createdByName}</span>`
+      ? `<span class="creator-badge-improved"><i class="fas fa-user-tie"></i><span class="creator-name">${createdByName}</span></span>`
       : '';
 
     return `

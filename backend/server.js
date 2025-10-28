@@ -467,13 +467,13 @@ async function startServer() {
           .json({ message: 'Erro ao buscar disponibilidade de equipamentos.' });
       }
     });
-
     app.get('/agendamentos', async (req, res) => {
       try {
         const db = await openDb();
         const { date, view } = req.query;
         let agendamentos;
         const hoje = new Date().toISOString().split('T')[0];
+
         if (date) {
           agendamentos = await db.all(
             'SELECT * FROM agendamentos WHERE ? BETWEEN startDate AND endDate ORDER BY startDate ASC, startTime ASC',
@@ -490,6 +490,17 @@ async function startServer() {
             [hoje]
           );
         }
+
+        for (let ag of agendamentos) {
+          if (ag.created_by) {
+            const user = await db.get(
+              'SELECT name FROM users WHERE email = ?',
+              [ag.created_by]
+            );
+            ag.created_by_full_name = user ? user.name : 'Desconhecido';
+          }
+        }
+
         res.json(agendamentos);
       } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar agendamentos.' });
@@ -511,6 +522,17 @@ async function startServer() {
           `SELECT * FROM agendamentos WHERE endDate >= ? AND responsible_interns LIKE ? ORDER BY startDate ASC, startTime ASC`,
           [hoje, searchTerm]
         );
+
+        for (let ag of agendamentos) {
+          if (ag.created_by) {
+            const user = await db.get(
+              'SELECT name FROM users WHERE email = ?',
+              [ag.created_by]
+            );
+            ag.created_by_full_name = user ? user.name : 'Desconhecido';
+          }
+        }
+
         res.json(agendamentos);
       } catch (error) {
         res.status(500).json({ message: 'Erro ao buscar tarefas.' });
@@ -526,6 +548,15 @@ async function startServer() {
           [id]
         );
         if (agendamento) {
+          if (agendamento.created_by) {
+            const user = await db.get(
+              'SELECT name FROM users WHERE email = ?',
+              [agendamento.created_by]
+            );
+            agendamento.created_by_full_name = user
+              ? user.name
+              : 'Desconhecido';
+          }
           res.json(agendamento);
         } else {
           res.status(404).json({ message: 'Agendamento não encontrado.' });
@@ -718,11 +749,9 @@ async function startServer() {
             message: 'Status de candidatura atualizado com sucesso!',
           });
         } else {
-          res
-            .status(404)
-            .json({
-              message: 'Agendamento ou nome do estagiário não fornecido.',
-            });
+          res.status(404).json({
+            message: 'Agendamento ou nome do estagiário não fornecido.',
+          });
         }
       } catch (error) {
         res.status(500).json({ message: 'Erro ao gerenciar candidatura.' });
@@ -776,7 +805,6 @@ async function startServer() {
         res.status(500).json({ message: 'Erro ao excluir agendamento.' });
       }
     });
-
     app.get('/notifications', async (req, res) => {
       const db = await openDb();
       const { internName } = req.query;

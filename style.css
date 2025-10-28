@@ -1891,3 +1891,32 @@ body {
     width: 90%;
   }
 }
+.creator-badge-improved {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: white;
+  background: linear-gradient(135deg, #5a32b3 0%, #764ba2 100%);
+  padding: 6px 14px;
+  border-radius: 18px;
+  margin-top: 10px;
+  font-weight: 600;
+  width: fit-content;
+  box-shadow: 0 3px 10px rgba(90, 50, 179, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.creator-badge-improved:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(90, 50, 179, 0.35);
+}
+
+.creator-badge-improved i {
+  font-size: 14px;
+}
+
+.creator-name {
+  letter-spacing: 0.3px;
+}

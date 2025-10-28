@@ -138,8 +138,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // A lógica do form.html não precisa mudar.
   if (form) {
-    // ... (todo o código do formulário que já tínhamos continua aqui, sem alterações)
   }
 });

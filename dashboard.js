@@ -462,8 +462,15 @@ document.addEventListener('DOMContentLoaded', function () {
           </div>
           <div class="event-status-bar"></div>
           <div class="event-details">
-            <span class="event-location">${location}</span>
-            <span class="event-title">${title}</span>
+            <div class="location-title-wrapper">
+              <div class="location-icon">
+                <i class="fas fa-door-open"></i>
+              </div>
+              <div class="location-title-content">
+                <div class="location-name">${location}</div>
+                <div class="title-name">${title}</div>
+              </div>
+            </div>
             ${createdByTag}
             ${grupoEventoTag}
           </div>

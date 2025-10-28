@@ -9,9 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
     alertBox.className = `custom-alert ${isSuccess ? 'success' : 'error'}`;
     alertBox.textContent = message;
     document.body.appendChild(alertBox);
-    setTimeout(() => {
-      alertBox.remove();
-    }, 3000);
+    setTimeout(() => alertBox.remove(), 3000);
   }
 
   function customConfirm(message) {
@@ -130,9 +128,7 @@ document.addEventListener('DOMContentLoaded', function () {
     allNavItems.forEach((item) => {
       const link = item.querySelector('a');
       if (!link) return;
-
       const href = link.getAttribute('href');
-
       if (userRole === 'GESTOR_DE_CURSO') {
         if (
           href === 'minhas-tarefas.html' ||
@@ -142,7 +138,6 @@ document.addEventListener('DOMContentLoaded', function () {
           item.style.display = 'none';
         }
       }
-
       if (userRole === 'SUPERVISOR') {
         if (href === 'minhas-tarefas.html') {
           item.style.display = 'none';
@@ -180,7 +175,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   async function carregarNotificacoesGestor() {
     if (userRole !== 'GESTOR_DE_CURSO' || !prioritizedList) return;
-
     try {
       const response = await fetch(
         `${RENDER_URL}/gestor-notifications?gestorEmail=${encodeURIComponent(
@@ -188,15 +182,12 @@ document.addEventListener('DOMContentLoaded', function () {
         )}`
       );
       if (!response.ok) {
-        console.error('Erro ao buscar notificações:', response.status);
         prioritizedList.innerHTML =
           '<p style="font-size: 13px; color: #888;">Erro ao carregar notificações.</p>';
         return;
       }
-
       const notifications = await response.json();
       prioritizedList.innerHTML = '';
-
       if (notifications.length === 0) {
         prioritizedList.innerHTML =
           '<p style="font-size: 13px; color: #888;">Nenhuma notificação no momento.</p>';
@@ -211,14 +202,7 @@ document.addEventListener('DOMContentLoaded', function () {
             deleted: 'fa-trash-alt',
           };
           const icon = iconMap[notif.type] || 'fa-bell';
-
-          const notifHTML = `
-            <div class="gestor-notification-item" data-id="${notif.id}">
-              <button class="notification-close-btn" data-notif-id="${notif.id}">&times;</button>
-              <i class="fas ${icon}"></i>
-              <span>${notif.message}</span>
-            </div>
-          `;
+          const notifHTML = `<div class="gestor-notification-item" data-id="${notif.id}"><button class="notification-close-btn" data-notif-id="${notif.id}">&times;</button><i class="fas ${icon}"></i><span>${notif.message}</span></div>`;
           prioritizedList.insertAdjacentHTML('beforeend', notifHTML);
         });
       }
@@ -246,13 +230,10 @@ document.addEventListener('DOMContentLoaded', function () {
       const params = new URLSearchParams();
       if (dataSelecionada) params.append('date', dataSelecionada);
       else if (view === 'past') params.append('view', 'past');
-
       const queryString = params.toString();
       if (queryString) url += `?${queryString}`;
-
       const response = await fetch(url);
       if (!response.ok) throw new Error('Falha ao buscar dados');
-
       const agendamentos = await response.json();
       renderizarDashboard(agendamentos, dataSelecionada, view);
     } catch (error) {
@@ -265,7 +246,6 @@ document.addEventListener('DOMContentLoaded', function () {
   function renderizarDashboard(agendamentos, dataSelecionada, view) {
     const mainTitle = dashboardContainer.querySelector('.main-title');
     if (!mainTitle) return;
-
     if (dataSelecionada)
       mainTitle.textContent = `AGENDAMENTOS PARA ${formatarData(
         dataSelecionada
@@ -280,6 +260,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (userRole === 'SUPERVISOR' && prioritizedList) {
       prioritizedList.innerHTML = '';
+      const prioritizedAgendamentos = agendamentos.filter(
+        (ag) => ag.is_prioritized === 1
+      );
+      if (prioritizedAgendamentos.length === 0) {
+        prioritizedList.innerHTML =
+          '<p style="font-size: 13px; color: #888;">Nenhum evento priorizado.</p>';
+      } else {
+        prioritizedAgendamentos.forEach((ag) => {
+          const dataFormatada = formatarData(ag.startDate);
+          const prioritizedItemHTML = `<div class="prioritized-item"><strong>${dataFormatada} - ${ag.startTime}h:</strong> ${ag.title} (${ag.location})</div>`;
+          prioritizedList.insertAdjacentHTML('beforeend', prioritizedItemHTML);
+        });
+      }
     }
 
     if (!agendamentos || agendamentos.length === 0) {
@@ -290,7 +283,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
       const groupedEvents = {};
       const ungroupedEvents = [];
-
       agendamentos.forEach((ag) => {
         if (ag.grupo_evento && ag.grupo_evento.trim() !== '') {
           if (!groupedEvents[ag.grupo_evento]) {
@@ -325,7 +317,6 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
   }
-
   function criarCardHTML(ag) {
     const equipments = JSON.parse(ag.equipments || '[]');
     const checkedEquipments = JSON.parse(ag.equipments_checked || '[]');
@@ -345,11 +336,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (userRole === 'ESTAGIARIO') {
           return `<span class="equip-check-item ${
             isChecked ? 'checked' : ''
-          }" data-equip="${safeEq}" data-agendamento-id="${ag.id}">
-                  <i class="fas ${
-                    isChecked ? 'fa-check-square' : 'fa-square'
-                  }"></i> ${exibicao}
-                </span>`;
+          }" data-equip="${safeEq}" data-agendamento-id="${
+            ag.id
+          }"><i class="fas ${
+            isChecked ? 'fa-check-square' : 'fa-square'
+          }"></i> ${exibicao}</span>`;
         } else {
           return `<span class="equip-item ${
             isChecked ? 'checked' : ''
@@ -373,41 +364,30 @@ document.addEventListener('DOMContentLoaded', function () {
         interns.length > 0
           ? interns.map((name) => `<li>${String(name)}</li>`).join('')
           : '<span class="none">Nenhum</span>';
-      const assignBlock = `
-          <div class="responsible-list">
-            <h4><span>Responsáveis:</span><button class="add-responsible-btn" data-id="${ag.id}" title="Designar">+</button></h4>
-            <ul>${internListHTML}</ul>
-          </div>`;
-
-      const supervisorButtons = `
-          <div class="supervisor-actions">
-            <div class="icon-button-group">
-              <button class="delete-btn" data-id="${
-                ag.id
-              }" title="Excluir"><i class="fas fa-trash-alt"></i></button>
-              <a href="form.html?id=${
-                ag.id
-              }" target="_blank" rel="noopener noreferrer" class="edit-btn" title="Editar"><i class="fas fa-pencil-alt"></i></a>
-              <button class="duplicate-btn" data-id="${
-                ag.id
-              }" title="Duplicar"><i class="fas fa-copy"></i></button>
-            </div>
-            <button class="priority-btn ${
-              ag.is_prioritized ? 'active' : ''
-            }" data-id="${ag.id}" title="Priorizar">Prioridade</button>
-          </div>`;
-
+      const assignBlock = `<div class="responsible-list"><h4><span>Responsáveis:</span><button class="add-responsible-btn" data-id="${ag.id}" title="Designar">+</button></h4><ul>${internListHTML}</ul></div>`;
+      const supervisorButtons = `<div class="supervisor-actions"><div class="icon-button-group"><button class="delete-btn" data-id="${
+        ag.id
+      }" title="Excluir"><i class="fas fa-trash-alt"></i></button><a href="form.html?id=${
+        ag.id
+      }" target="_blank" rel="noopener noreferrer" class="edit-btn" title="Editar"><i class="fas fa-pencil-alt"></i></a><button class="duplicate-btn" data-id="${
+        ag.id
+      }" title="Duplicar"><i class="fas fa-copy"></i></button></div><button class="priority-btn ${
+        ag.is_prioritized ? 'active' : ''
+      }" data-id="${ag.id}" title="Priorizar">Prioridade</button></div>`;
       topRightActionsHTML = assignBlock + supervisorButtons;
     } else if (userRole === 'ESTAGIARIO') {
       const isCandidato = interns.includes(currentUserName);
-      topRightActionsHTML = `
-          <div class="assign-container">
-            <button class="candidate-btn ${
-              isCandidato ? 'active' : ''
-            }" data-id="${ag.id}">
-              ${isCandidato ? 'Candidatado(a)' : 'Candidatar-se'}
-            </button>
-          </div>`;
+      topRightActionsHTML = `<div class="assign-container"><button class="candidate-btn ${
+        isCandidato ? 'active' : ''
+      }" data-id="${ag.id}">${
+        isCandidato ? 'Candidatado(a)' : 'Candidatar-se'
+      }</button></div>`;
+    } else if (userRole === 'GESTOR_DE_CURSO') {
+      let internListHTML =
+        interns.length > 0
+          ? interns.map((name) => `<li>${String(name)}</li>`).join('')
+          : '<span class="none">Nenhum</span>';
+      topRightActionsHTML = `<div class="responsible-list"><h4><span>Responsáveis:</span></h4><ul>${internListHTML}</ul></div>`;
     }
 
     let descriptionBlockHTML = '';
@@ -424,15 +404,7 @@ document.addEventListener('DOMContentLoaded', function () {
           )}</p></div>`
         : '';
       const descriptionId = `desc-${ag.id}`;
-      descriptionBlockHTML = `
-          <div class="description-content" id="${descriptionId}">
-            <div class="description-box">
-              <div class="presence-info"><strong>Presença de Estagiário:</strong> ${presenceText}</div> 
-              ${notesContent}
-            </div>
-          </div>
-          <button class="description-btn" data-target="${descriptionId}">DESCRIÇÃO</button>
-        `;
+      descriptionBlockHTML = `<div class="description-content" id="${descriptionId}"><div class="description-box"><div class="presence-info"><strong>Presença de Estagiário:</strong> ${presenceText}</div>${notesContent}</div></div><button class="description-btn" data-target="${descriptionId}">DESCRIÇÃO</button>`;
     }
 
     const location = ag.location || 'Local não definido';
@@ -442,7 +414,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const grupoEventoTag = ag.grupo_evento
       ? `<span class="event-group-tag">${ag.grupo_evento}</span>`
       : '';
-
     const createdByName =
       ag.created_by_full_name ||
       (ag.created_by ? ag.created_by.split('@')[0] : 'Desconhecido');
@@ -450,42 +421,13 @@ document.addEventListener('DOMContentLoaded', function () {
       ? `<span class="creator-badge-improved"><i class="fas fa-user-tie"></i><span class="creator-name">${createdByName}</span></span>`
       : '';
 
-    return `
-      <div class="event-card" data-id="${ag.id}">
-        <div class="event-header">
-          <div class="event-time">
-            <span class="event-date-short">${formatarIntervaloDatas(
-              ag.startDate,
-              ag.endDate
-            )}</span>
-            <span>${startTime}</span><span>${endTime}</span>
-          </div>
-          <div class="event-status-bar"></div>
-          <div class="event-details">
-            <div class="location-title-wrapper">
-              <div class="location-icon">
-                <i class="fas fa-door-open"></i>
-              </div>
-              <div class="location-title-content">
-                <div class="location-name">${location}</div>
-                <div class="title-name">${title}</div>
-              </div>
-            </div>
-            ${createdByTag}
-            ${grupoEventoTag}
-          </div>
-          ${equipmentsHTML} 
-          <div class="event-top-right-actions">
-             ${topRightActionsHTML}
-          </div>
-        </div>
-        ${descriptionBlockHTML} 
-      </div>`;
+    return `<div class="event-card" data-id="${
+      ag.id
+    }"><div class="event-header"><div class="event-time"><span class="event-date-short">${formatarIntervaloDatas(ag.startDate, ag.endDate)}</span><span>${startTime}</span><span>${endTime}</span></div><div class="event-status-bar"></div><div class="event-details"><div class="location-title-wrapper"><div class="location-icon"><i class="fas fa-door-open"></i></div><div class="location-title-content"><div class="location-name">${location}</div><div class="title-name">${title}</div></div></div>${createdByTag}${grupoEventoTag}</div>${equipmentsHTML}<div class="event-top-right-actions">${topRightActionsHTML}</div></div>${descriptionBlockHTML}</div>`;
   }
 
   async function handleBodyClick(event) {
     const targetElement = event.target;
-
     const notificationCloseBtn = targetElement.closest(
       '.notification-close-btn'
     );
@@ -545,7 +487,6 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!response.ok) throw new Error('Agendamento não encontrado');
       const ag = await response.json();
       let checkedEquipments = JSON.parse(ag.equipments_checked || '[]');
-
       if (checkedEquipments.includes(equipName)) {
         checkedEquipments = checkedEquipments.filter((e) => e !== equipName);
       } else {
@@ -571,7 +512,6 @@ document.addEventListener('DOMContentLoaded', function () {
         icon.className = `fas ${
           item.classList.contains('checked') ? 'fa-check-square' : 'fa-square'
         }`;
-
       carregarAgendamentos();
     } catch (error) {
       console.error('Erro ao alternar checklist:', error);
@@ -627,18 +567,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
   async function openAssignModal(agendamentoId) {
     if (!agendamentoId || !assignModal || !modalInternList) return;
-
     assignModal.dataset.agendamentoId = agendamentoId;
     try {
       const [internsResponse, agendamentoResponse] = await Promise.all([
         fetch(`${RENDER_URL}/estagiarios`),
         fetch(`${RENDER_URL}/agendamentos/${agendamentoId}`),
       ]);
-
-      if (!internsResponse.ok || !agendamentoResponse.ok) {
+      if (!internsResponse.ok || !agendamentoResponse.ok)
         throw new Error('Falha ao buscar dados');
-      }
-
       const allInternsResult = await internsResponse.json();
       const agendamento = await agendamentoResponse.json();
       const internNames = Array.isArray(allInternsResult)
@@ -647,7 +583,6 @@ document.addEventListener('DOMContentLoaded', function () {
       const responsibleInterns = JSON.parse(
         agendamento.responsible_interns || '[]'
       );
-
       renderizarListaModal(responsibleInterns, internNames);
       assignModal.style.display = 'flex';
     } catch (error) {
@@ -660,7 +595,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!modalInternList) return;
     modalInternList.innerHTML = '';
     if (!Array.isArray(allInterns)) return;
-
     allInterns.forEach((internName) => {
       const safeInternName = String(internName);
       const isAssigned = responsibleInterns.includes(safeInternName);
@@ -673,10 +607,8 @@ document.addEventListener('DOMContentLoaded', function () {
   async function handleModalListClick(event) {
     const internListItem = event.target.closest('li');
     if (!internListItem || !assignModal) return;
-
     const internName = internListItem.dataset.name;
     const agendamentoId = assignModal.dataset.agendamentoId;
-
     if (!internName || !agendamentoId) return;
 
     try {
@@ -694,11 +626,9 @@ document.addEventListener('DOMContentLoaded', function () {
       const updatedInterns = JSON.parse(
         updatedAgendamento.responsible_interns || '[]'
       );
-
       const allInternsInModal = Array.from(modalInternList.children).map(
         (li) => li.dataset.name
       );
-
       renderizarListaModal(updatedInterns, allInternsInModal);
       carregarAgendamentos();
     } catch (error) {
@@ -719,7 +649,6 @@ document.addEventListener('DOMContentLoaded', function () {
         viewUpcomingBtn.classList.add('active');
         viewPastBtn.classList.remove('active');
       });
-
       viewPastBtn.addEventListener('click', () => {
         carregarAgendamentos(null, 'past');
         viewPastBtn.classList.add('active');

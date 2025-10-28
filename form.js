@@ -44,9 +44,7 @@ document.addEventListener('DOMContentLoaded', function () {
     alertBox.className = `custom-alert ${isSuccess ? 'success' : 'error'}`;
     alertBox.textContent = message;
     document.body.appendChild(alertBox);
-    setTimeout(() => {
-      alertBox.remove();
-    }, 3000);
+    setTimeout(() => alertBox.remove(), 3000);
   }
 
   const currentUserJSON = localStorage.getItem('currentUser');
@@ -62,6 +60,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 1500);
     return;
   }
+
   const schedulerEmail = currentUser.email;
   const schedulerRole = currentUser.role;
 
@@ -86,20 +85,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function populateTimeSelects(selectElement) {
     if (!selectElement) return;
-
     const startTime = 8;
     const endTime = 19;
-
     selectElement.innerHTML =
       '<option value="" disabled selected>Selecione...</option>';
-
     for (let hour = startTime; hour <= endTime; hour++) {
       const hourStr = String(hour).padStart(2, '0');
       const option00 = document.createElement('option');
       option00.value = `${hourStr}:00`;
       option00.textContent = `${hourStr}:00`;
       selectElement.appendChild(option00);
-
       if (hour < endTime) {
         const option30 = document.createElement('option');
         option30.value = `${hourStr}:30`;
@@ -160,16 +155,12 @@ document.addEventListener('DOMContentLoaded', function () {
   function renderEquipamentos() {
     const container = document.getElementById('equipamentos-container');
     if (!container) return;
-
     container.innerHTML = '';
-
     EQUIPMENT_LIST.forEach((equipName) => {
       const equipItem = document.createElement('div');
       equipItem.className = 'equipment-card';
       equipItem.id = `equip-${equipName}`;
-
       const iconClass = EQUIPMENT_ICONS[equipName] || 'fa-box';
-
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.name = 'equip';
@@ -179,30 +170,23 @@ document.addEventListener('DOMContentLoaded', function () {
         checkEquipmentAvailability();
         updateFormEquipments();
       });
-
       const iconSpan = document.createElement('span');
       iconSpan.className = 'equipment-icon';
       iconSpan.innerHTML = `<i class="fas ${iconClass}"></i>`;
-
       const infoDiv = document.createElement('div');
       infoDiv.className = 'equipment-info';
-
       const nameSpan = document.createElement('span');
       nameSpan.className = 'equipment-name';
       nameSpan.textContent = equipName;
-
       const availSpan = document.createElement('span');
       availSpan.className = 'equipment-availability';
       availSpan.textContent = 'Selecione data e horário';
       availSpan.id = `avail-${equipName}`;
-
       infoDiv.appendChild(nameSpan);
       infoDiv.appendChild(availSpan);
-
       const quantityControl = document.createElement('div');
       quantityControl.className = 'quantity-control';
       quantityControl.id = `qty-control-${equipName}`;
-
       const minusBtn = document.createElement('button');
       minusBtn.type = 'button';
       minusBtn.className = 'quantity-btn';
@@ -216,12 +200,10 @@ document.addEventListener('DOMContentLoaded', function () {
           updateFormEquipments();
         }
       });
-
       const quantityDisplay = document.createElement('span');
       quantityDisplay.className = 'quantity-display';
       quantityDisplay.textContent = '1';
       quantityDisplay.id = `qty-${equipName}`;
-
       const plusBtn = document.createElement('button');
       plusBtn.type = 'button';
       plusBtn.className = 'quantity-btn';
@@ -236,23 +218,18 @@ document.addEventListener('DOMContentLoaded', function () {
           updateFormEquipments();
         }
       });
-
       quantityControl.appendChild(minusBtn);
       quantityControl.appendChild(quantityDisplay);
       quantityControl.appendChild(plusBtn);
-
       const topDiv = document.createElement('div');
       topDiv.className = 'equipment-top';
       topDiv.appendChild(checkbox);
       topDiv.appendChild(iconSpan);
       topDiv.appendChild(infoDiv);
-
       equipItem.appendChild(topDiv);
       equipItem.appendChild(quantityControl);
-
       container.appendChild(equipItem);
     });
-
     checkEquipmentAvailability();
   }
 
@@ -295,9 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const response = await fetch(
         `${RENDER_URL}/equipamentos-disponiveis?data=${data}&horaInicio=${horaInicio}&horaFim=${horaFim}`
       );
-
       if (!response.ok) throw new Error('Erro ao buscar disponibilidade');
-
       const disponibilidade = await response.json();
 
       EQUIPMENT_LIST.forEach((equipName) => {
@@ -321,7 +296,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (availSpan) {
           availSpan.textContent = `${disponivel}/${total} disponível(is)`;
           availSpan.className = 'equipment-availability';
-
           if (podeReservar) {
             availSpan.classList.add('available');
             availSpan.classList.remove('warning');
@@ -338,12 +312,10 @@ document.addEventListener('DOMContentLoaded', function () {
           } else {
             equipItem.classList.add('unavailable');
           }
-
           if (checkbox && !podeReservar && checkbox.checked) {
             checkbox.checked = false;
             updateFormEquipments();
           }
-
           if (checkbox) {
             checkbox.disabled = !podeReservar;
           }
@@ -359,7 +331,6 @@ document.addEventListener('DOMContentLoaded', function () {
           let existingTooltip =
             availSpan.parentElement?.querySelector('.conflict-tooltip');
           if (existingTooltip) existingTooltip.remove();
-
           const tooltip = document.createElement('div');
           tooltip.className = 'conflict-tooltip';
           const conflitosText = reservados
@@ -416,7 +387,6 @@ document.addEventListener('DOMContentLoaded', function () {
         `${RENDER_URL}/agendamentos/${idParaBuscar}`
       );
       if (!response.ok) throw new Error('Agendamento não encontrado.');
-
       const ag = await response.json();
 
       const eventTitleInput = document.getElementById('event-title');
@@ -453,7 +423,6 @@ document.addEventListener('DOMContentLoaded', function () {
       equipments.forEach((equip) => {
         const equipName = typeof equip === 'string' ? equip : equip.name;
         const quantity = typeof equip === 'object' ? equip.quantity : 1;
-
         const checkbox = document.querySelector(
           `input[name="equip"][value="${equipName}"]`
         );
@@ -567,10 +536,9 @@ document.addEventListener('DOMContentLoaded', function () {
             'agendamentoAtualizado',
             Date.now()
           );
+          window.opener.location.reload();
         } catch (e) {
-          console.warn(
-            'Não foi possível notificar a janela principal (pode estar fechada ou ser de origem diferente).'
-          );
+          console.warn('Não foi possível notificar a janela principal.');
         }
       }
 
